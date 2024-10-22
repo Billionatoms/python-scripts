@@ -126,7 +126,7 @@ plot_with_stats(ax1, invariant_masses, bins=50, range=(0, 200),
 # Plot 2: Difference in pT between truth-level quarks and jets
 ax2 = plt.subplot(2, 2, 2)
 plot_with_stats(ax2, jet_quark_diff, bins=50, range=(-100, 100), 
-                xlabel="pT Difference (GeV)", ylabel="Number of Events", title="pT Difference Between Quarks and Jets")
+                xlabel="pT quark - pT jet (GeV)", ylabel="Number of Events", title="pT Difference Between Quarks and Jets")
 
 # Plot 3: Delta R between closest jet and quark
 ax3 = plt.subplot(2, 2, 3)
