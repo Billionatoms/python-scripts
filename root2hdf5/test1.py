@@ -62,7 +62,7 @@ def convert_lctuple_to_h5(root_file, tree_name, output_file):
 
 # %%
 # Usage example
-root_file = "/eos/user/s/ssaini/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root"  # Path to your input LCTuple ROOT file
+root_file = "//mnt/c/Users/Saurabh/cernbox/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root"  # Path to your input LCTuple ROOT file
 tree_name = "LCTuple"    # Name of the tree in the ROOT file
 output_file = "output.h5" # Desired output HDF5 file name
 

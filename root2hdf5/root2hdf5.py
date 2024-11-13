@@ -6,7 +6,7 @@ import numpy as np
 
 # %%
 # Step 1: Open the ROOT file and extract data
-f = uproot.open("/eos/user/s/ssaini/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root")
+f = uproot.open("/mnt/c/Users/Saurabh/cernbox/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root")
 tree = f["LCTuple"]
 
 # Extract relevant brnaches from the ROOT file

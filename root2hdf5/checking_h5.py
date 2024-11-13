@@ -17,7 +17,7 @@ def print_structure(name, obj):
 
 # %%
 # Open the hdf5 file
-with h5py.File("/eos/user/s/ssaini/tutorial-Btagging-dataset/pp_output_train.h5") as file:
+with h5py.File("/mnt/c/Users/Saurabh/cernbox/tutorial-Btagging-dataset/pp_output_train.h5") as file:
     print("HDF5 file structure:")
     file.visititems(print_structure)
 
