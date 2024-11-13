@@ -3,11 +3,11 @@
 import uproot
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics.pairwise import euclidean_distances
+
 
 # %%
 # Open the ROOT file and extract the branches
-f = uproot.open("/eos/user/s/ssaini/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root")
+f = uproot.open("/mnt/c/Users/Saurabh/cernbox/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root")
 tree = f["LCTuple"]
 jmox = tree["jmox"].array()
 jmoy = tree["jmoy"].array()
