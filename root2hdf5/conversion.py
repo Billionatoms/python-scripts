@@ -129,30 +129,112 @@ mceta = 0.5 * np.log((mcmo + mcmoz) / (mcmo - mcmoz + epsilon))
 
 
 # %%
-# Functions for delta_phi and delta_r
-def delta_phi(phi1, phi2):
-    dphi = np.abs(phi1 - phi2)
-    return np.where(dphi > np.pi, 2 * np.pi - dphi, dphi)
+# Define the compound data type for each dataset
+# Dataset 'consts'
+dtype_consts = np.dtype([
+    ("truth_hadron_idx", np.int32),
+    ("truth_vertex_idx", np.int32),
+    ("truth_origin_label", np.int32),
+    ("valid", np.bool_),
+    ("is_gamma", np.bool_),
+    ("is_neutral_had", np.bool_),
+    ("is_electron", np.bool_),
+    ("is_muon", np.bool_),
+    ("is_charged_had", np.bool_),
+    ("charge", np.int32),
+    ("phi_rel", np.float32),
+    ("eta_rel", np.float32),
+    ("pt_frac", np.float32),
+    ("d0", np.float32),
+    ("z0", np.float32),
+    ("dr", np.float32),
+    ("signed_2d_ip", np.float32),
+    ("signed_3d_ip", np.float32)
+])
 
-def delta_r(eta1, phi1, eta2, phi2):
-    return np.sqrt((eta1 - eta2)**2 + delta_phi(phi1, phi2)**2)
+
+# %%
+# Dataset 'hadrons'
+dtype_hadrons = np.dtype([
+    ("valid", np.bool_),
+    ("pt", np.float32),
+    ("Lxy", np.float32),
+    ("flavour", np.int32),
+    ("hadron_idx", np.int32),
+    ("hadron_parent_idx", np.int32),
+    ("mass", np.float32),
+    ("dr", np.float32)
+])
+
+
+# %%
+# Dataset 'jets'
+dtype_jets = np.dtype([
+    ("pt", np.float32),
+    ("eta", np.float32),
+    ("flavour", np.int32),
+    ("flavour_label", np.int32)
+])
+
+# %%
+# Define dataset shapes and chunk sizes
+shape_consts = (13500000, 50)
+chunks_consts = (100, 50)
+
+shape_hadrons = (13500000, 5)
+chunks_hadrons = (100, 5)
+
+shape_jets = (13500000,)
+chunks_jets = (6592,)
+
+
 
 # %%
 # Step 3: Prepare the data for HDF5 format
-data_to_save = {
-    'evevt': evevt,
-    'mcpt': mcpt,
-    'jpt': jpt
-}
-
+#data_to_save = {
+#    'evevt': evevt,
+#    'mcpt': mcpt,
+#    'jpt': jpt
+#}
 
 # %%
-# Step 4: Write data to an HDF5 file
-with h5py.File("../../output_data/output_13Nov2024_v0.h5", "w") as hdf5_file:
-    for key, data in data_to_save.items():
-        hdf5_file.create_dataset(key, data=data)
+# Create the HDF5 file and datasets
+with h5py.File("example.h5", "w") as f:
+    # Create 'consts' dataset with LZF compression
+    dataset_consts = f.create_dataset(
+        "consts",
+        shape=shape_consts,
+        dtype=dtype_consts,
+        chunks=chunks_consts,
+        compression="lzf"
+    )
+    dataset_consts[...] = np.zeros(shape_consts, dtype=dtype_consts)  # Optionally initialize
+
+    # Create 'hadrons' dataset with LZF compression
+    dataset_hadrons = f.create_dataset(
+        "hadrons",
+        shape=shape_hadrons,
+        dtype=dtype_hadrons,
+        chunks=chunks_hadrons,
+        compression="lzf"
+    )
+    dataset_hadrons[...] = np.zeros(shape_hadrons, dtype=dtype_hadrons)  # Optionally initialize
+
+    # Create 'jets' dataset with LZF compression
+    dataset_jets = f.create_dataset(
+        "jets",
+        shape=shape_jets,
+        dtype=dtype_jets,
+        chunks=chunks_jets,
+        compression="lzf"
+    )
+    dataset_jets[...] = np.zeros(shape_jets, dtype=dtype_jets)  # Optionally initialize
+
+    # Set the 'flavour_label' attribute for the 'jets' dataset
+    dataset_jets.attrs["flavour_label"] = np.array(["bjets", "ujets", "cjets"], dtype="S")
 
 
 print("Conversion complete. Data saved as a .h5 file")
+
 
 # %%
