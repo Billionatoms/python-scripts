@@ -1,4 +1,5 @@
 # %%
+# Importing the necessary libararies
 import uproot
 import h5py
 import numpy as np
@@ -7,7 +8,6 @@ import numpy as np
 # Step 1: Open the ROOT file and extract data
 f = uproot.open("/mnt/c/Users/Saurabh/cernbox/muonc/btagging/samples/v0.0.1/mumu_H_bb_10TeV.00000.lctuple.root")
 tree = f["LCTuple"]
-
 
 # %%
 # Event level information
@@ -110,70 +110,55 @@ tsrpx = tree["tsrpx"].array()     # Global reference position of the track state
 tsrpy = tree["tsrpy"].array()     # Global reference position of the track state in y direction
 tsrpz = tree["tsrpz"].array()     # Global reference position of the track state in z direction
 
-    
-
-# %%
-# Step 2: calculating pT, phi, eta 
-# Calculate pT, phi, and eta values for jets
-jpt = np.sqrt(jmox**2 + jmoy**2)
-jphi = np.arctan2(jmoy, jmox)
-jmo = np.sqrt(jmox**2 + jmoy**2 + jmoz**2)
-epsilon = 1e-10  # A small value to prevent division by zero
-jeta = 0.5 * np.log((jmo + jmoz) / (jmo - jmoz + epsilon))
-
-# Calculate pT, phi, and eta values for truth-level quarks
-mcpt = np.sqrt(mcmox**2 + mcmoy**2)
-mcphi = np.arctan2(mcmoy, mcmox)
-mcmo = np.sqrt(mcmox**2 + mcmoy**2 + mcmoz**2)
-mceta = 0.5 * np.log((mcmo + mcmoz) / (mcmo - mcmoz + epsilon))
 
 
 # %%
-# Define the compound data type for each dataset
+# Step 2: Define the compound data type for each dataset
+
 # Dataset 'consts'
 dtype_consts = np.dtype([
-    ("truth_hadron_idx", np.int32),
-    ("truth_vertex_idx", np.int32),
-    ("truth_origin_label", np.int32),
-    ("valid", np.bool_),
-    ("is_gamma", np.bool_),
-    ("is_neutral_had", np.bool_),
-    ("is_electron", np.bool_),
-    ("is_muon", np.bool_),
-    ("is_charged_had", np.bool_),
-    ("charge", np.int32),
-    ("phi_rel", np.float32),
-    ("eta_rel", np.float32),
-    ("pt_frac", np.float32),
-    ("d0", np.float32),
-    ("z0", np.float32),
-    ("dr", np.float32),
-    ("signed_2d_ip", np.float32),
-    ("signed_3d_ip", np.float32)
+    ("truth_hadron_idx", np.int32),                 # Truth particle hadron ID?
+    ("truth_vertex_idx", np.int32),                 # Truth particle vertex ID?
+    ("truth_origin_label", np.int32),               # Truth particle origin label?
+    ("valid", np.bool_),                            # Valid???
+    ("is_gamma", np.bool_),                         # is it a photon?
+    ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
+    ("is_electron", np.bool_),                      # is it a electron?
+    ("is_muon", np.bool_),                          # is it a muon?
+    ("is_charged_had", np.bool_),                   # is it a charged hadron?
+    ("charge", np.int32),                           # Charge of the truth particle
+    ("phi_rel", np.float32),                        # phi of the truth particle?
+    ("eta_rel", np.float32),                        # eta of the tuth particle
+    ("pt_frac", np.float32),                        # pT fraction of the tuth particle?
+    ("d0", np.float32),                             # d0 of the truth particle
+    ("z0", np.float32),                             # z0 of the truth particle 
+    ("dr", np.float32),                             # dr of the truthh particle
+    ("signed_2d_ip", np.float32),                   # signed impact parameter in transverse
+    ("signed_3d_ip", np.float32)                    # signed impact parameter in transverse and longitudinal
 ])
 
 
 # %%
 # Dataset 'hadrons'
-dtype_hadrons = np.dtype([
-    ("valid", np.bool_),
-    ("pt", np.float32),
-    ("Lxy", np.float32),
-    ("flavour", np.int32),
-    ("hadron_idx", np.int32),
-    ("hadron_parent_idx", np.int32),
-    ("mass", np.float32),
-    ("dr", np.float32)
+dtype_hadrons = np.dtype([                          # Tracks???
+    ("valid", np.bool_),                            # Valid???
+    ("pt", np.float32),                             # pT of the tracks?
+    ("Lxy", np.float32),                            # Angular momentum 
+    ("flavour", np.int32),                          # Flavour
+    ("hadron_idx", np.int32),                       # Hadron ID???
+    ("hadron_parent_idx", np.int32),                # Hadron parent ID
+    ("mass", np.float32),                           # Mass
+    ("dr", np.float32)                              # dr
 ])
 
 
 # %%
 # Dataset 'jets'
-dtype_jets = np.dtype([
-    ("pt", np.float32),
-    ("eta", np.float32),
-    ("flavour", np.int32),
-    ("flavour_label", np.int32)
+dtype_jets = np.dtype([                             # Jets
+    ("pt", np.float32),                             # pT of the jets
+    ("eta", np.float32),                            # eta of the jets
+    ("flavour", np.int32),                          # flavour of the jets
+    ("flavour_label", np.int32)                     # flavour label of the jets
 ])
 
 # %%
@@ -190,16 +175,41 @@ chunks_jets = (6592,)
 
 
 # %%
-# Step 3: Prepare the data for HDF5 format
-#data_to_save = {
-#    'evevt': evevt,
-#    'mcpt': mcpt,
-#    'jpt': jpt
-#}
+# Step 3: Calculations of variables not in root file
+
+# Function to calculate total momentum
+def calculate_mo(px, py, pz):
+    mo = np.sqrt(px**2 + py**2 + pz**3)
+    return mo
+
+# Function to calculate pseudorapidity (eta)
+def calculate_eta(px, py, pz):
+    pt = np.sqrt(px**2 + py**2)
+    theta = np.arctan2(pt, pz)
+    eta = -np.log(np.tan(theta / 2))
+    return eta, theta, pt
+
+# Function to calculate azimuthal angle (phi)
+def calculate_phi(px, py):
+    phi = np.arctan2(py, px)
+    return phi
+
+# Function to calculate ΔR
+def delta_R(eta1, phi1, eta2, phi2):
+    dphi = np.abs(phi1 - phi2)
+    dphi = np.where(dphi > np.pi, 2*np.pi - dphi, dphi)
+    delta_r = np.sqrt((eta1 - eta2)**2 + dphi**2)
+    return delta_r, dphi
+
+# Helper function to check if a variable is scalar
+def is_scalar(value):
+    return np.isscalar(value)
+
+
 
 # %%
 # Create the HDF5 file and datasets
-with h5py.File("example.h5", "w") as f:
+with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_14Nov2024_v0.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
@@ -234,7 +244,7 @@ with h5py.File("example.h5", "w") as f:
     dataset_jets.attrs["flavour_label"] = np.array(["bjets", "ujets", "cjets"], dtype="S")
 
 
-print("Conversion complete. Data saved as a .h5 file")
+print("Conversion complete. Data saved as a .h5 file in /home/ssaini/dev/muonc/btagging/output_data")
 
 
 # %%
