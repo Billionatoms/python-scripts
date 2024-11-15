@@ -80,11 +80,11 @@ jcov9 = tree["jcov9"].array()      # Jet covariance cov(z0, z0)
 
 # %%
 # Track level information
-ntrk = tree["ntrk"].array()       # Number of tracks
-trori = tree["trori"].array()     # Track calorimeter ID???
-trtyp = tree["trtyp"].array()     # Track type???
-trch2 = tree["trch2"].array()     # Chi^2 of the track fit
-trndf = tree["trndf"].array()     # Number of degrees of freedom of the track fit
+ntrk = tree["ntrk"].array()       # Total Number of tracks in the event
+trori = tree["trori"].array()     # Origin of the track, typically representing the detector or simulation process.
+trtyp = tree["trtyp"].array()     # Type of the track, categorizing its origin or purpose.
+trch2 = tree["trch2"].array()     # Chi-squared of the track fit, indicating the quality of the track reconstruction
+trndf = tree["trndf"].array()     # Number of degrees of freedom in the track fit
 tredx = tree["tredx"].array()     # Track's dE/dx
 trede = tree["trede"].array()     # Track's dE/dx error
 trrih = tree["trrih"].array()     # Radius of inner most hit
@@ -94,9 +94,9 @@ trshn = tree["trshn"].array()     # Subdetector Hit number
 trthd = tree["trthd"].array()     # ???
 trnts = tree["trnts"].array()     # Track states size???
 trfts = tree["trfts"].array()     # ???
-trsip = tree["trsip"].array()     # Track state at IP
-trsfh = tree["trsfh"].array()     # Track state at first state???
-trslh = tree["trslh"].array()     # Track state at last hit
+trsip = tree["trsip"].array()     # Significance of the track's Impact Parameter(e.g., deviation from expected vertex)
+trsfh = tree["trsfh"].array()     # First hit associated with the track
+trslh = tree["trslh"].array()     # Last hit associated with the track
 trsca = tree["trsca"].array()     # Track state at calorimeter
 ntrst = tree["ntrst"].array()     # Number of tarck states
 tsloc = tree["tsloc"].array()     # Track location
