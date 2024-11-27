@@ -3,6 +3,7 @@
 import uproot
 import h5py
 import numpy as np
+import awkward as ak
 
 # %%
 # Step 1: Open the ROOT file and extract data
@@ -169,8 +170,6 @@ chunks_consts = (100, 50)
 shape_hadrons = (13500000, 5)
 chunks_hadrons = (100, 5)
 
-shape_jets = (13500000,)
-chunks_jets = (6592,)
 
 
 
@@ -178,33 +177,77 @@ chunks_jets = (6592,)
 # Step 3: Calculations of variables not in root file
 
 # Function to calculate total momentum
-def calculate_mo(px, py, pz):
-    mo = np.sqrt(px**2 + py**2 + pz**3)
-    return mo
+def mo(px, py, pz):
+    return np.sqrt(px**2 + py**2 + pz**2)
+
+# Function to calculate transverse momentum (pt)
+def pt(px, py):
+    return np.sqrt(px**2 + py**2)
+
+# Funtion to calculate theta
+def theta(px, py, pz):
+    pt_values = pt(px, py)
+    return np.arctan2(pt_values, pz)
 
 # Function to calculate pseudorapidity (eta)
-def calculate_eta(px, py, pz):
-    pt = np.sqrt(px**2 + py**2)
-    theta = np.arctan2(pt, pz)
-    eta = -np.log(np.tan(theta / 2))
-    return eta, theta, pt
+def eta(px, py, pz):
+    pt_values = pt(px, py)
+    theta_values = theta(px, py, pz)
+    return -1 * np.log(np.tan(theta_values/2))
 
 # Function to calculate azimuthal angle (phi)
-def calculate_phi(px, py):
-    phi = np.arctan2(py, px)
-    return phi
+def phi(px, py):
+    return np.arctan2(py, px)
 
 # Function to calculate ΔR
-def delta_R(eta1, phi1, eta2, phi2):
+def delta_phi(phi1, phi2):
     dphi = np.abs(phi1 - phi2)
-    dphi = np.where(dphi > np.pi, 2*np.pi - dphi, dphi)
-    delta_r = np.sqrt((eta1 - eta2)**2 + dphi**2)
-    return delta_r, dphi
+    return np.where(dphi > np.pi, 2 * np.pi - dphi, dphi)
+
+# Functions for delta_phi and delta_r
+def delta_r(eta1, phi1, eta2, phi2):
+    return np.sqrt((eta1 - eta2)**2 + delta_phi(phi1, phi2)**2)
 
 # Helper function to check if a variable is scalar
 def is_scalar(value):
     return np.isscalar(value)
 
+# %%
+# Define the dtype for the 'jets' dataset
+dtype_jets = np.dtype([('pt', np.float32), ('eta', np.float32)])
+
+# Flatten the pt and eta arrays
+flat_pt = ak.flatten(pt(jmox, jmoy))
+flat_eta = ak.flatten(eta(jmox, jmoy, jmoz))
+
+# Create a structured array to hold the jets data
+jets_data = np.empty(len(flat_pt), dtype=dtype_jets)
+jets_data['pt'] = flat_pt
+jets_data['eta'] = flat_eta 
+
+# Match truth-level quarks to jets based on proximity in eta-phi space
+for i in range(len(jpt)):
+    if len(jpt[i]) >= 2:
+        # Find the indices of the first two b-quarks from the generator
+        b_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 5))[0]
+        
+        if len(b_quark_indices) >= 2:
+            b_quark_indices = b_quark_indices[:2]  # Get the first two indices
+
+            # Compute delta R distances between jets and truth quarks
+            distances = np.array([[delta_r(jeta[i][j], jphi[i][j], mceta[i][b], mcphi[i][b])
+                                   for b in b_quark_indices]
+                                  for j in range(len(jpt[i]))])
+
+            # Find the closest jets to each quark
+            closest_jets = np.argmin(distances, axis=0)
+
+
+            # Store delta R values for the closest matches
+            delta_r_values.extend([distances[closest_jets[j], j] for j in range(2)])
+
+            # Store jet pT values
+            jet_pt_values.extend(jpt[i])
 
 
 # %%
@@ -233,13 +276,14 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_14Nov2024_v0.
     # Create 'jets' dataset with LZF compression
     dataset_jets = f.create_dataset(
         "jets",
-        shape=shape_jets,
+        data=jets_data,
         dtype=dtype_jets,
-        chunks=chunks_jets,
         compression="lzf"
     )
-    dataset_jets[...] = np.zeros(shape_jets, dtype=dtype_jets)  # Optionally initialize
+#    dataset_jets[...] = jets_data  # Optionally initialize
+    
 
+    
     # Set the 'flavour_label' attribute for the 'jets' dataset
     dataset_jets.attrs["flavour_label"] = np.array(["bjets", "ujets", "cjets"], dtype="S")
 
