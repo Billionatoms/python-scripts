@@ -162,13 +162,6 @@ dtype_jets = np.dtype([                             # Jets
     ("flavour_label", np.int32)                     # flavour label of the jets
 ])
 
-# %%
-# Define dataset shapes and chunk sizes
-shape_consts = (13500000, 50)
-chunks_consts = (100, 50)
-
-shape_hadrons = (13500000, 5)
-chunks_hadrons = (100, 5)
 
 
 
@@ -213,18 +206,21 @@ def is_scalar(value):
     return np.isscalar(value)
 
 # %%
-# Define the dtype for the 'jets' dataset
-dtype_jets = np.dtype([('pt', np.float32), ('eta', np.float32)])
-
 # Flatten the pt and eta arrays
-flat_pt = ak.flatten(pt(jmox, jmoy))
-flat_eta = ak.flatten(eta(jmox, jmoy, jmoz))
+jpt = pt(jmox, jmoy)
+jeta = eta(jmox, jmoy, jmoz)
+jphi = phi(jmox, jmoy)
 
-# Create a structured array to hold the jets data
-jets_data = np.empty(len(flat_pt), dtype=dtype_jets)
-jets_data['pt'] = flat_pt
-jets_data['eta'] = flat_eta 
+mcpt = pt(mcmox, mcmoy)
+mceta = eta(mcmox, mcmoy, mcmoz)
+mcphi = phi(mcmox, mcmoy)
 
+
+matched_jet_pt = []
+matched_jet_eta = []
+
+
+# %%
 # Match truth-level quarks to jets based on proximity in eta-phi space
 for i in range(len(jpt)):
     if len(jpt[i]) >= 2:
@@ -241,18 +237,24 @@ for i in range(len(jpt)):
 
             # Find the closest jets to each quark
             closest_jets = np.argmin(distances, axis=0)
+            
+            
+            # Store jet pT and eta values for the closest matches
+            for j in closest_jets:
+                matched_jet_pt.append(jpt[i][j])
+                matched_jet_eta.append(jeta[i][j])
 
-
-            # Store delta R values for the closest matches
-            delta_r_values.extend([distances[closest_jets[j], j] for j in range(2)])
-
-            # Store jet pT values
-            jet_pt_values.extend(jpt[i])
 
 
 # %%
+# Create a structured array to hold the jets data
+jets_data = np.empty(len(matched_jet_pt), dtype=dtype_jets)
+jets_data['pt'] = matched_jet_pt
+jets_data['eta'] = matched_jet_eta
+
+# %%
 # Create the HDF5 file and datasets
-with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_14Nov2024_v0.h5", "w") as f:
+with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_27Nov2024_v0.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
@@ -280,7 +282,7 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_14Nov2024_v0.
         dtype=dtype_jets,
         compression="lzf"
     )
-#    dataset_jets[...] = jets_data  # Optionally initialize
+    dataset_jets[...] = jets_data  # Optionally initialize
     
 
     
