@@ -13,6 +13,7 @@ tree = f["LCTuple"]
 # %%
 # Event level information
 evevt = tree["evevt"].array()      # Event number
+""" 
 evrun = tree["evrun"].array()      # Event run number
 evwgt = tree["evwgt"].array()      # Event weight
 evtim = tree["evtim"].array()      # Event time stamp
@@ -22,24 +23,24 @@ evpoe = tree["evpoe"].array()      # Event Polarization 1
 evpop = tree["evpop"].array()      # Event Polarization 2
 evnch = tree["evnch"].array()      # ???
 evpro = tree["evpro"].array()      # Event process
-
+"""
 
 # %%
 # Truth level information
 nmcp = tree["nmcp"].array()        # Number of truth particle
-mcori = tree["mcori"].array()      # CollID???
 mcpdg = tree["mcpdg"].array()      # Truth particle PDG
 mcgst = tree["mcgst"].array()      # Truth particle generator status
 mcsst = tree["mcsst"].array()      # Truth particle simulator status
-mcvtx = tree["mcvtx"].array()      # Truth particle vertex x
-mcvty = tree["mcvty"].array()      # Truth particle vertex y
-mcvtz = tree["mcvtz"].array()      # Truth particle vertex z
-mcepx = tree["mcepx"].array()      # Truth particle end point in x
-mcepy = tree["mcepy"].array()      # Truth particle end point in y
-mcepz = tree["mcepz"].array()      # Truth particle end point in z
 mcmox = tree["mcmox"].array()      # Truth partcile momentumn in x-direction
 mcmoy = tree["mcmoy"].array()      # Truth partcile momentumn in y-direction
 mcmoz = tree["mcmoz"].array()      # Truth partcile momentumn in z-direction
+mcvtx = tree["mcvtx"].array()      # Truth particle vertex x
+mcvty = tree["mcvty"].array()      # Truth particle vertex y
+mcvtz = tree["mcvtz"].array()      # Truth particle vertex z
+"""
+mcepx = tree["mcepx"].array()      # Truth particle end point in x
+mcepy = tree["mcepy"].array()      # Truth particle end point in y
+mcepz = tree["mcepz"].array()      # Truth particle end point in z
 mcmass = tree["mcmas"].array()     # Truth particle mass
 mcene = tree["mcene"].array()      # Truth particle energy
 mccha = tree["mccha"].array()      # Truth particle charge
@@ -56,6 +57,8 @@ mcda1 = tree["mcda1"].array()      # Truth particle daughter 1
 mcda2 = tree["mcda2"].array()      # Truth particle daughter 2
 mcda3 = tree["mcda3"].array()      # Truth particle daughter 3
 mcda4 = tree["mcda4"].array()      # Truth particle daughter 4
+mcori = tree["mcori"].array()      # CollID???
+"""
 
 
 # %%
@@ -64,6 +67,7 @@ njet = tree["njet"].array()        # Number of jets
 jmox = tree["jmox"].array()        # Jet momentumn in x-direction
 jmoy = tree["jmoy"].array()        # Jet momentumn in y-direction
 jmoz = tree["jmoz"].array()        # Jet momentumn in z-direction
+"""
 jmas = tree["jmas"].array()        # Jet's mass
 jene = tree["jene"].array()        # Jet's energy
 jcha = tree["jcha"].array()        # Jet's charge
@@ -77,11 +81,27 @@ jcov6 = tree["jcov6"].array()      # Jet covariance cov(z0, d0)
 jcov7 = tree["jcov7"].array()      # Jet covariance cov(z0, ϕ)
 jcov8 = tree["jcov8"].array()      # Jet covariance cov(z0, Ω)
 jcov9 = tree["jcov9"].array()      # Jet covariance cov(z0, z0)
+"""
 
 
 # %%
 # Track level information
 ntrk = tree["ntrk"].array()       # Total Number of tracks in the event
+tsdze = tree["tsdze"].array()     # Track d0 parameter
+tsphi = tree["tsphi"].array()     # Track phi parameter
+tsome = tree["tsome"].array()     # Curvature $1/mm$ of the track. Proportional to magnetic field. (Ω)
+tszze = tree["tszze"].array()     # Track z0 parameter
+tstnl = tree["tstnl"].array()     # tanλ, with λ = pitch angle
+tscov = tree["tscov"].array()     # Covariance matrix, stored as array of size 15 per hit
+tsrpx = tree["tsrpx"].array()     # Global reference position of the track state in x direction
+tsrpy = tree["tsrpy"].array()     # Global reference position of the track state in y direction
+tsrpz = tree["tsrpz"].array()     # Global reference position of the track state in z direction
+trsip = tree["trsip"].array()     # Significance of the track's Impact Parameter(e.g., deviation from expected vertex)
+trsfh = tree["trsfh"].array()     # First hit associated with the track
+trslh = tree["trslh"].array()     # Last hit associated with the track
+trsca = tree["trsca"].array()     # Track state at calorimeter
+ntrst = tree["ntrst"].array()     # Number of tarck states
+"""
 trori = tree["trori"].array()     # Origin of the track, typically representing the detector or simulation process.
 trtyp = tree["trtyp"].array()     # Type of the track, categorizing its origin or purpose.
 trch2 = tree["trch2"].array()     # Chi-squared of the track fit, indicating the quality of the track reconstruction
@@ -95,22 +115,8 @@ trshn = tree["trshn"].array()     # Subdetector Hit number
 trthd = tree["trthd"].array()     # ???
 trnts = tree["trnts"].array()     # Track states size???
 trfts = tree["trfts"].array()     # ???
-trsip = tree["trsip"].array()     # Significance of the track's Impact Parameter(e.g., deviation from expected vertex)
-trsfh = tree["trsfh"].array()     # First hit associated with the track
-trslh = tree["trslh"].array()     # Last hit associated with the track
-trsca = tree["trsca"].array()     # Track state at calorimeter
-ntrst = tree["ntrst"].array()     # Number of tarck states
 tsloc = tree["tsloc"].array()     # Track location
-tsdze = tree["tsdze"].array()     # Track d0 parameter
-tsphi = tree["tsphi"].array()     # Track phi parameter
-tsome = tree["tsome"].array()     # Curvature $1/mm$ of the track. Proportional to magnetic field. (Ω)
-tszze = tree["tszze"].array()     # Track z0 parameter
-tstnl = tree["tstnl"].array()     # tanλ, with λ = pitch angle
-tscov = tree["tscov"].array()     # Covariance matrix, stored as array of size 15 per hit
-tsrpx = tree["tsrpx"].array()     # Global reference position of the track state in x direction
-tsrpy = tree["tsrpy"].array()     # Global reference position of the track state in y direction
-tsrpz = tree["tsrpz"].array()     # Global reference position of the track state in z direction
-
+"""
 
 
 # %%
@@ -164,8 +170,6 @@ dtype_jets = np.dtype([                             # Jets
 
 
 
-
-
 # %%
 # Step 3: Calculations of quantities not in root file
 
@@ -192,6 +196,10 @@ def eta(px, py, pz):
 def phi(px, py):
     return np.arctan2(py, px)
 
+def track_eta(tan_lambda):
+    angle = np.arctan(tan_lambda)
+    return -1 * np.log(np.tan(angle/2))
+
 # Function to calculate ΔR
 def delta_phi(phi1, phi2):
     dphi = np.abs(phi1 - phi2)
@@ -202,26 +210,26 @@ def delta_r(eta1, phi1, eta2, phi2):
     return np.sqrt((eta1 - eta2)**2 + delta_phi(phi1, phi2)**2)
 
 # Function to calculate track charge from curvature
-def calculate_charge(curvature):
+def track_charge(curvature):
     return np.sign(curvature)
 
 # Function to calculate track momentum from curvature and tan(lambda)
-def calculate_momentum(curvature, tan_lambda, magnetic_field=3.57):
+def track_p(curvature, tan_lambda, magnetic_field=3.57):
     return np.abs(0.3 * magnetic_field / curvature) / np.cos(np.arctan(tan_lambda))
 
 # Function to calculate transverse momentum (pt) from total momentum (p) and pitch angle (lambda)
-def calculate_transverse_momentum(momentum, tan_lambda):
+def track_pT(momentum, tan_lambda):
     angle = np.arctan(tan_lambda)
     return momentum * np.sin(angle)
 
 # Function to calculate signed impact parameter significance
-def calculate_signed_ip(d0, d0sig, phi_jet, phi_track):
+def signed_ip(d0, d0sig, phi_jet, phi_track):
     theta = phi_jet - phi_track
     sj = 1.0 if (np.sin(theta))*d0 >= 0 else -1.0
     return np.abs(d0 / d0sig) * sj
 
 # Function to determine particle type based on PDG ID
-def determine_particle_type(pdg_id):
+def pid(pdg_id):
     if pdg_id == 22:
         return "gamma"
     elif pdg_id in [111, 130, 310, 2112]:
@@ -234,6 +242,7 @@ def determine_particle_type(pdg_id):
         return "charged_had"
     else:
         return "unknown"
+
 
 
 # %%
@@ -250,11 +259,11 @@ mceta = eta(mcmox, mcmoy, mcmoz)
 mcphi = phi(mcmox, mcmoy)
 
 # calculating values for tracks
-trk_charge = calculate_charge(tsome)
-trk_momentum = calculate_momentum(tsome, tstnl)
-trk_pt = calculate_transverse_momentum(trk_momentum, tstnl)
-trk_eta = eta(tsrpx, tsrpy, tsrpz)
-trk_phi = phi(tsrpx, tsrpy)
+trk_charge = track_charge(tsome)
+trk_momentum = track_p(tsome, tstnl)
+trk_pt = track_pT(trk_momentum, tstnl)
+trk_eta = track_eta(tstnl)
+trk_phi = tsphi
 
 
 # %%
@@ -321,18 +330,17 @@ for i in range(len(evevt)):
         jet_consts = []
         for k in range(ntrk[i]):
             if delta_r(jeta[i][j], jphi[i][j], trk_eta[i][k], trk_phi[i][k]) < 0.4:  # Matching criterion
-                
                 d0sig = np.sqrt(tscov[i][k][0])  # Extract d0 uncertainty from the covariance matrix
                 z0sig = np.sqrt(tscov[i][k][9])  # Extract z0 uncertainty from the covariance matrix
-                signed_2d_ip = calculate_signed_ip(tsdze[i][k],
-                                                   d0sig,
-                                                   jphi[i][j], tsphi[i][k])
-                signed_3d_ip = calculate_signed_ip(np.sqrt(tsdze[i][k]**2 + tszze[i][k]**2),
-                                                   np.sqrt(d0sig**2 + z0sig**2),
-                                                   jphi[i][j], tsphi[i][k])
+                signed_2d_ip = signed_ip(tsdze[i][k],
+                                         d0sig,
+                                         jphi[i][j], tsphi[i][k])
+                signed_3d_ip = signed_ip(np.sqrt(tsdze[i][k]**2 + tszze[i][k]**2),
+                                         np.sqrt(d0sig**2 + z0sig**2),
+                                         jphi[i][j], tsphi[i][k])
                 
                 # Determine particle type
-                particle_type = determine_particle_type(mcpdg[i][k])
+                particle_type = pid(mcpdg[i][k])
                 is_gamma = particle_type == "gamma"
                 is_neutral_had = particle_type == "neutral_had"
                 is_electron = particle_type == "electron"
@@ -340,9 +348,9 @@ for i in range(len(evevt)):
                 is_charged_had = particle_type == "charged_had"
                 
                 const = (
-                    k,  # truth_hadron_idx (using track index as placeholder)
-                    k,  # truth_vertex_idx (using track index as placeholder)
-                    mcpdg[i][k],  # truth_origin_label (using PDG ID as placeholder)
+                    -1,  # truth_hadron_idx (not available)
+                    -1,  # truth_vertex_idx (not available)
+                    mcpdg[i][k],  # truth_origin_label (using PDG ID)
                     True,  # valid (assuming all tracks are valid)
                     is_gamma,
                     is_neutral_had,
@@ -380,7 +388,7 @@ flat_consts_data = [item for sublist in consts_data for subsublist in sublist fo
 
 # Define dataset shapes and chunk sizes
 shape_consts = (len(flat_consts_data),)
-chunks_consts = (1000,)
+chunks_consts = (min(1000, shape_consts[0]),)
 
 shape_hadrons = (13500000, 5)
 chunks_hadrons = (100, 5)
@@ -388,7 +396,7 @@ chunks_hadrons = (100, 5)
 
 # %%
 # Step 7: Create the HDF5 file and datasets
-with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_11Dec2024_v1.h5", "w") as f:
+with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_11Dec2024_v2.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
