@@ -158,8 +158,8 @@ dtype_hadrons = np.dtype([                          # Tracks???
 dtype_jets = np.dtype([                             # Jets
     ("pt", np.float32),                             # pT of the jets
     ("eta", np.float32),                            # eta of the jets
-    ("flavour", np.int32),                          # flavour of the jets
-    ("flavour_label", np.int32)                     # flavour label of the jets
+    ("flavour", np.int32)                          # flavour of the jets
+#    ("flavour_label", np.int32)                     # flavour label of the jets
 ])
 
 
@@ -167,7 +167,7 @@ dtype_jets = np.dtype([                             # Jets
 
 
 # %%
-# Step 3: Calculations of variables not in root file
+# Step 3: Calculations of quantities not in root file
 
 # Function to calculate total momentum
 def mo(px, py, pz):
@@ -201,30 +201,70 @@ def delta_phi(phi1, phi2):
 def delta_r(eta1, phi1, eta2, phi2):
     return np.sqrt((eta1 - eta2)**2 + delta_phi(phi1, phi2)**2)
 
-# Helper function to check if a variable is scalar
-def is_scalar(value):
-    return np.isscalar(value)
+# Function to calculate track charge from curvature
+def calculate_charge(curvature):
+    return np.sign(curvature)
+
+# Function to calculate track momentum from curvature and tan(lambda)
+def calculate_momentum(curvature, tan_lambda, magnetic_field=3.57):
+    return np.abs(0.3 * magnetic_field / curvature) / np.cos(np.arctan(tan_lambda))
+
+# Function to calculate transverse momentum (pt) from total momentum (p) and pitch angle (lambda)
+def calculate_transverse_momentum(momentum, tan_lambda):
+    angle = np.arctan(tan_lambda)
+    return momentum * np.sin(angle)
+
+# Function to calculate signed impact parameter significance
+def calculate_signed_ip(d0, d0sig, phi_jet, phi_track):
+    theta = phi_jet - phi_track
+    sj = 1.0 if (np.sin(theta))*d0 >= 0 else -1.0
+    return np.abs(d0 / d0sig) * sj
+
+# Function to determine particle type based on PDG ID
+def determine_particle_type(pdg_id):
+    if pdg_id == 22:
+        return "gamma"
+    elif pdg_id in [111, 130, 310, 2112]:
+        return "neutral_had"
+    elif pdg_id in [11, -11]:
+        return "electron"
+    elif pdg_id in [13, -13]:
+        return "muon"
+    elif pdg_id in [211, -211, 321, -321, 2212, -2212]:
+        return "charged_had"
+    else:
+        return "unknown"
+
 
 # %%
 # calculating pt and eta values into a arrays
+
+# calculating values for jets
 jpt = pt(jmox, jmoy)
 jeta = eta(jmox, jmoy, jmoz)
 jphi = phi(jmox, jmoy)
 
+# calculating values for truth particles
 mcpt = pt(mcmox, mcmoy)
 mceta = eta(mcmox, mcmoy, mcmoz)
 mcphi = phi(mcmox, mcmoy)
 
+# calculating values for tracks
+trk_charge = calculate_charge(tsome)
+trk_momentum = calculate_momentum(tsome, tstnl)
+trk_pt = calculate_transverse_momentum(trk_momentum, tstnl)
+trk_eta = eta(tsrpx, tsrpy, tsrpz)
+trk_phi = phi(tsrpx, tsrpy)
 
-# matched_jet_pt = []
-# matched_jet_eta = []
+
+# %%
+# Step 4: Match truth-level quarks to jets based on proximity in eta-phi space
 
 # Define the label mapping and class names
 label_map = {0: 0, 4: 1, 5: 2}
 class_names = ["ujets", "cjets", "bjets"]
 
-# %%
-# Match truth-level quarks to jets based on proximity in eta-phi space
+# Create a structured array to hold the jets data
 b_quark_indices = []
 c_quark_indices = []
 u_quark_indices = []
@@ -240,7 +280,7 @@ matched_jet_eta = []
 matched_jet_flavour = []
 
 # Function to match jets to quarks and label them
-def match_jets_to_quarks(jet_eta, jet_phi, quark_eta, quark_phi, flavour_label):
+def match_jets_to_quarks(jet_eta, jet_phi, quark_eta, quark_phi, flavour):
     if len(jet_eta) == 0 or len(quark_eta) == 0:
         return  # Skip if there are no jets or no quarks
     distances = np.array([[delta_r(jet_eta[j], jet_phi[j], quark_eta[q], quark_phi[q])
@@ -250,7 +290,7 @@ def match_jets_to_quarks(jet_eta, jet_phi, quark_eta, quark_phi, flavour_label):
     for j in closest_jets:
         matched_jet_pt.append(jpt[i][j])
         matched_jet_eta.append(jeta[i][j])
-        matched_jet_flavour.append(label_map[flavour_label])
+        matched_jet_flavour.append(label_map[flavour])
         
         
 # Match jets to b-quarks
@@ -269,66 +309,86 @@ for i in range(len(jpt)):
         match_jets_to_quarks(jeta[i], jphi[i], mceta[i][u_quark_indices[i]], mcphi[i][u_quark_indices[i]], 0)
       
 
+# %%
+# Step 5: Match tracks to jets and calculate quantities for 'consts' dataset
+
+consts_data = []
+
+# Function to match tracks to jets and calculate quantities
+for i in range(len(evevt)):
+    event_consts = []
+    for j in range(njet[i]):
+        jet_consts = []
+        for k in range(ntrk[i]):
+            if delta_r(jeta[i][j], jphi[i][j], trk_eta[i][k], trk_phi[i][k]) < 0.4:  # Matching criterion
+                
+                d0sig = np.sqrt(tscov[i][k][0])  # Extract d0 uncertainty from the covariance matrix
+                z0sig = np.sqrt(tscov[i][k][9])  # Extract z0 uncertainty from the covariance matrix
+                signed_2d_ip = calculate_signed_ip(tsdze[i][k],
+                                                   d0sig,
+                                                   jphi[i][j], tsphi[i][k])
+                signed_3d_ip = calculate_signed_ip(np.sqrt(tsdze[i][k]**2 + tszze[i][k]**2),
+                                                   np.sqrt(d0sig**2 + z0sig**2),
+                                                   jphi[i][j], tsphi[i][k])
+                
+                # Determine particle type
+                particle_type = determine_particle_type(mcpdg[i][k])
+                is_gamma = particle_type == "gamma"
+                is_neutral_had = particle_type == "neutral_had"
+                is_electron = particle_type == "electron"
+                is_muon = particle_type == "muon"
+                is_charged_had = particle_type == "charged_had"
+                
+                const = (
+                    k,  # truth_hadron_idx (using track index as placeholder)
+                    k,  # truth_vertex_idx (using track index as placeholder)
+                    mcpdg[i][k],  # truth_origin_label (using PDG ID as placeholder)
+                    True,  # valid (assuming all tracks are valid)
+                    is_gamma,
+                    is_neutral_had,
+                    is_electron,
+                    is_muon,
+                    is_charged_had,
+                    trk_charge[i][k],
+                    tsphi[i][k] - jphi[i][j],
+                    trk_eta[i][k] - jeta[i][j],
+                    trk_pt[i][k] / jpt[i][j],
+                    tsdze[i][k],
+                    tszze[i][k],
+                    delta_r(jeta[i][j], jphi[i][j], trk_eta[i][k], trk_phi[i][k]),
+                    signed_2d_ip,
+                    signed_3d_ip
+                )
+                jet_consts.append(const)
+        event_consts.append(jet_consts)
+    consts_data.append(event_consts)
+
+
+
 
 # %%
-# Match truth-level quarks to jets based on proximity in eta-phi space
-# for i in range(len(jpt)):
-#    if len(jpt[i]) >= 2:
-        # Find the indices of the first two b-quarks from the generator
-#        b_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 5))[0]
-        
-#        if len(b_quark_indices) >= 2:
-#            b_quark_indices = b_quark_indices[:2]  # Get the first two indices
+# Step 6: Create a structured array to hold data and define its shapes and chunk sizes
 
-            # Compute delta R distances between jets and truth quarks
-#            distances = np.array([[delta_r(jeta[i][j], jphi[i][j], mceta[i][b], mcphi[i][b])
-#                                   for b in b_quark_indices]
-#                                  for j in range(len(jpt[i]))])
-
-            # Find the closest jets to each quark
-#            closest_jets = np.argmin(distances, axis=0)
-            
-            
-            # Store jet pT and eta values for the closest matches
-#            for j in closest_jets:
-#                matched_jet_pt.append(jpt[i][j])
-#                matched_jet_eta.append(jeta[i][j])
-
-
-
-# %%
 # Create a structured array to hold the jets data
 jets_data = np.empty(len(matched_jet_pt), dtype=dtype_jets)
 jets_data['pt'] = matched_jet_pt
 jets_data['eta'] = matched_jet_eta
 jets_data['flavour'] = matched_jet_flavour
 
-# Create a structured array to hold the track data
-# consts_data = np.empty(len(ntrk), dtype=dtype_consts)
-# consts_data['d0'] = tsdze
-# consts_data['z0'] = tszze
-# consts_data['phi_rel'] = tsphi
-# consts_data['eta_rel'] = eta(trpx, trpy, trpz) # momentum of the track is not available in the root file
-# consts_data['pt_frac'] = pt(trpx, trpy) / pt(jmox, jmoy) # pT fraction of the track is not available in the root file
-# consts_data['charge'] = trcha # Charge of the truth particle is not available in the root file
-# consts_data['dr'] =  
-# consts_data['signed_2d_ip'] = trsip
-# consts_data['signed_3d_ip'] = trsip
+# Flatten the consts_data for HDF5 storage (since it's a nested list)
+flat_consts_data = [item for sublist in consts_data for subsublist in sublist for item in subsublist]
 
-# %%
 # Define dataset shapes and chunk sizes
-shape_consts = (13500000, 50)
-chunks_consts = (100, 50)
+shape_consts = (len(flat_consts_data),)
+chunks_consts = (1000,)
+
 shape_hadrons = (13500000, 5)
 chunks_hadrons = (100, 5)
 
 
-
-
-
 # %%
-# Create the HDF5 file and datasets
-with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_09Dec2024_v0.h5", "w") as f:
+# Step 7: Create the HDF5 file and datasets
+with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_11Dec2024_v1.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
@@ -337,7 +397,7 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_09Dec2024_v0.
         chunks=chunks_consts,
         compression="lzf"
     )
-    dataset_consts[...] = np.zeros(shape_consts, dtype=dtype_consts)  # Optionally initialize
+    dataset_consts[...] = np.array(flat_consts_data, dtype=dtype_consts)  # Store the calculated data
 
     # Create 'hadrons' dataset with LZF compression
     dataset_hadrons = f.create_dataset(
@@ -356,7 +416,7 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_09Dec2024_v0.
         dtype=dtype_jets,
         compression="lzf"
     )
-    dataset_jets[...] = jets_data  # Optionally initialize
+    dataset_jets[...] = jets_data  # Store the calculated data
     
     # Set the 'flavour_label' attribute for the 'jets' dataset
     dataset_jets.attrs["flavour_label"] = np.array(class_names, dtype="S")
