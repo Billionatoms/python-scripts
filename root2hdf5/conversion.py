@@ -4,7 +4,9 @@ import uproot
 import h5py
 import numpy as np
 import awkward as ak
-import ROOT
+from ROOT import TLorentzVector
+import cupy as cp
+from numba import njit, prange
 
 # %%
 # Step 1: Open the ROOT file and extract data
@@ -123,27 +125,27 @@ ntrst = tree["ntrst"].array()     # Number of tarck states
 # %%
 # Step 2: Define the compound data type for each dataset
 
-# Dataset 'consts'
-dtype_consts = np.dtype([
-    ("truth_hadron_idx", np.int32),                 # particle hadron ID?
-    ("truth_vertex_idx", np.int32),                 # particle vertex ID?
-    ("truth_origin_label", np.int32),               # particle origin label?
-    ("valid", np.bool_),                            # Valid???
-    ("is_gamma", np.bool_),                         # is it a photon?
-    ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
-    ("is_electron", np.bool_),                      # is it a electron?
-    ("is_muon", np.bool_),                          # is it a muon?
-    ("is_charged_had", np.bool_),                   # is it a charged hadron?
-    ("charge", np.int32),                           # Charge of the particle
-    ("phi_rel", np.float32),                        # phi of the particle?
-    ("eta_rel", np.float32),                        # eta of the particle
-    ("pt_frac", np.float32),                        # pT fraction of the particle?
-    ("d0", np.float32),                             # d0 of the particle
-    ("z0", np.float32),                             # z0 of the particle 
-    ("dr", np.float32),                             # dr of the particle
-    ("signed_2d_ip", np.float32),                   # signed impact parameter in transverse
-    ("signed_3d_ip", np.float32)                    # signed impact parameter in transverse and longitudinal
-])
+# # Dataset 'consts'
+# dtype_consts = np.dtype([
+#     ("truth_hadron_idx", np.int32),                 # particle hadron ID?
+#     ("truth_vertex_idx", np.int32),                 # particle vertex ID?
+#     ("truth_origin_label", np.int32),               # particle origin label?
+#     ("valid", np.bool_),                            # Valid???
+#     ("is_gamma", np.bool_),                         # is it a photon?
+#     ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
+#     ("is_electron", np.bool_),                      # is it a electron?
+#     ("is_muon", np.bool_),                          # is it a muon?
+#     ("is_charged_had", np.bool_),                   # is it a charged hadron?
+#     ("charge", np.int32),                           # Charge of the particle
+#     ("phi_rel", np.float32),                        # phi of the particle?
+#     ("eta_rel", np.float32),                        # eta of the particle
+#     ("pt_frac", np.float32),                        # pT fraction of the particle?
+#     ("d0", np.float32),                             # d0 of the particle
+#     ("z0", np.float32),                             # z0 of the particle 
+#     ("dr", np.float32),                             # dr of the particle
+#     ("signed_2d_ip", np.float32),                   # signed impact parameter in transverse
+#     ("signed_3d_ip", np.float32)                    # signed impact parameter in transverse and longitudinal
+# ])
 
 
 # %%
@@ -180,111 +182,42 @@ def lorentz_vectors(px_array, py_array, pz_array, energy_array):
     for px_event, py_event, pz_event, en_event in zip(px_array, py_array, pz_array, energy_array):
         vectors = []
         for px, py, pz, en in zip(px_event, py_event, pz_event, en_event):
-            vec = ROOT.TLorentzVector()
+            vec = TLorentzVector()
             vec.SetPxPyPzE(px, py, pz, en)
             vectors.append(vec)
         vectors_events.append(vectors)
     return vectors_events
 
 
-# Assuming magnetic field B in Tesla
-B_field = 3.57  # Replace with the actual value if different
-
 # %%
 # Function to create TLorentzVectors for tracks
-def track_lorentz_vectors(tsphi_array, tsome_array, tstnl_array):
-    vectors_events = []
-    for phi_event, omega_event, tan_lambda_event in zip(tsphi_array, tsome_array, tstnl_array):
-        vectors = []
-        for phi, omega, tan_lambda in zip(phi_event, omega_event, tan_lambda_event):
-            omega = np.abs(omega)  # Ensure omega is positive
-            if omega == 0:
-                p_T = 0  # Avoid division by zero
-            else:
-                p_T = (0.3 * B_field) / (omega * 1000)  # Convert omega from 1/mm to 1/m
 
-            px = p_T * np.cos(phi)
-            py = p_T * np.sin(phi)
-            pz = p_T * tan_lambda
+# # Constants
+# B_field = 3.57  # Magnetic field in Tesla
+# mass_pion = 139.57  # Pion mass in MeV/c^2
 
-            energy = np.sqrt(px**2 + py**2 + pz**2)  # Assuming massless particles
+# def track_lorentz_vectors(tsphi_array, tsome_array, tstnl_array):
+#     vectors_events = []
+#     for phi_event, omega_event, tan_lambda_event in zip(tsphi_array, tsome_array, tstnl_array):
+#         vectors = []
+#         for phi, omega, tan_lambda in zip(phi_event, omega_event, tan_lambda_event):
+#             omega = np.abs(omega)  # Ensure omega is positive
+#             if omega == 0:
+#                 p_T = 0  # Avoid division by zero
+#             else:
+#                 p_T = (0.3 * B_field) / (omega * 1000)  # Convert omega from 1/mm to 1/m
 
-            vec = ROOT.TLorentzVector()
-            vec.SetPxPyPzE(px, py, pz, energy)
-            vectors.append(vec)
-        vectors_events.append(vectors)
-    return vectors_events
+#             px = p_T * np.cos(phi)
+#             py = p_T * np.sin(phi)
+#             pz = p_T * tan_lambda
 
+#             energy = np.sqrt(px**2 + py**2 + pz**2)  # Assuming massless particles
 
-# # Function to calculate total momentum
-# def mo(px, py, pz):
-#     return np.sqrt(px**2 + py**2 + pz**2)
-
-# # Function to calculate transverse momentum (pt)
-# def pt(px, py):
-#     return np.sqrt(px**2 + py**2)
-
-# # Funtion to calculate theta
-# def theta(px, py, pz):
-#     pt_values = pt(px, py)
-#     return np.arctan2(pt_values, pz)
-
-# # Function to calculate pseudorapidity (eta)
-# def eta(px, py, pz):
-#     pt_values = pt(px, py)
-#     theta_values = theta(px, py, pz)
-#     return -1 * np.log(np.tan(theta_values/2))
-
-# # Function to calculate azimuthal angle (phi)
-# def phi(px, py):
-#     return np.arctan2(py, px)
-
-# def track_eta(tan_lambda):
-#     angle = np.arctan(tan_lambda)
-#     return -1 * np.log(np.tan(angle/2))
-
-# # Function to calculate ΔR
-# def delta_phi(phi1, phi2):
-#     dphi = np.abs(phi1 - phi2)
-#     return np.where(dphi > np.pi, 2 * np.pi - dphi, dphi)
-
-# # Functions for delta_phi and delta_r
-# def delta_r(eta1, phi1, eta2, phi2):
-#     return np.sqrt((eta1 - eta2)**2 + delta_phi(phi1, phi2)**2)
-
-# # Function to calculate track charge from curvature
-# def track_charge(curvature):
-#     return np.sign(curvature)
-
-# # Function to calculate track momentum from curvature and tan(lambda)
-# def track_p(curvature, tan_lambda, magnetic_field=3.57):
-#     return np.abs(0.3 * magnetic_field / curvature) / np.cos(np.arctan(tan_lambda))
-
-# # Function to calculate transverse momentum (pt) from total momentum (p) and pitch angle (lambda)
-# def track_pT(momentum, tan_lambda):
-#     angle = np.arctan(tan_lambda)
-#     return momentum * np.sin(angle)
-
-# # Function to calculate signed impact parameter significance
-# def signed_ip(d0, d0sig, phi_jet, phi_track):
-#     theta = phi_jet - phi_track
-#     sj = 1.0 if (np.sin(theta))*d0 >= 0 else -1.0
-#     return np.abs(d0 / d0sig) * sj
-
-# # Function to determine particle type based on PDG ID
-# def pid(pdg_id):
-#     if pdg_id == 22:
-#         return "gamma"
-#     elif pdg_id in [111, 130, 310, 2112]:
-#         return "neutral_had"
-#     elif pdg_id in [11, -11]:
-#         return "electron"
-#     elif pdg_id in [13, -13]:
-#         return "muon"
-#     elif pdg_id in [211, -211, 321, -321, 2212, -2212]:
-#         return "charged_had"
-#     else:
-#         return "unknown"
+#             vec = TLorentzVector()
+#             vec.SetPxPyPzE(px, py, pz, energy)
+#             vectors.append(vec)
+#         vectors_events.append(vectors)
+#     return vectors_events
 
 
 
@@ -298,67 +231,74 @@ jets = lorentz_vectors(jmox, jmoy, jmoz, jene)
 truth_particles = lorentz_vectors(mcmox, mcmoy, mcmoz, mcene)
 
 # Create TLorentzVector objects for tracks
-tracks = track_lorentz_vectors(tsphi, tsome, tstnl)
-
-# # calculating values for jets
-# jpt = pt(jmox, jmoy)
-# jeta = eta(jmox, jmoy, jmoz)
-# jphi = phi(jmox, jmoy)
-
-# # calculating values for truth particles
-# mcpt = pt(mcmox, mcmoy)
-# mceta = eta(mcmox, mcmoy, mcmoz)
-# mcphi = phi(mcmox, mcmoy)
-
-# # calculating values for tracks
-# trk_charge = track_charge(tsome)
-# trk_momentum = track_p(tsome, tstnl)
-# trk_pt = track_pT(trk_momentum, tstnl)
-# trk_eta = track_eta(tstnl)
-# trk_phi = tsphi
+# tracks = track_lorentz_vectors(tsphi, tsome, tstnl)
 
 
 # %%
 # Step 4: Calculating quantities using TLorentzVector methods
 
 # For jets
-jpt = [[vec.Pt() for vec in event] for event in jets]
-jeta = [[vec.Eta() for vec in event] for event in jets]
-jphi = [[vec.Phi() for vec in event] for event in jets]
+# jpt = [[vec.Pt() for vec in event] for event in jets]
+# jeta = [[vec.Eta() for vec in event] for event in jets]
+# jphi = [[vec.Phi() for vec in event] for event in jets]
+
+# # For truth particles
+# mcpt = [[vec.Pt() for vec in event] for event in truth_particles]
+# mceta = [[vec.Eta() for vec in event] for event in truth_particles]
+# mcphi = [[vec.Phi() for vec in event] for event in truth_particles]
+
+# Step 4: Calculating quantities using TLorentzVector methods with CuPy
+
+# For jets
+jpt = []
+jeta = []
+jphi = []
+for event in jets:
+    pt_list = cp.array([vec.Pt() for vec in event], dtype=cp.float32)
+    eta_list = cp.array([vec.Eta() for vec in event], dtype=cp.float32)
+    phi_list = cp.array([vec.Phi() for vec in event], dtype=cp.float32)
+    jpt.append(pt_list)
+    jeta.append(eta_list)
+    jphi.append(phi_list)
 
 # For truth particles
-mcpt = [[vec.Pt() for vec in event] for event in truth_particles]
-mceta = [[vec.Eta() for vec in event] for event in truth_particles]
-mcphi = [[vec.Phi() for vec in event] for event in truth_particles]
+mcpt = []
+mceta = []
+mcphi = []
+for event in truth_particles:
+    pt_list = cp.array([vec.Pt() for vec in event], dtype=cp.float32)
+    eta_list = cp.array([vec.Eta() for vec in event], dtype=cp.float32)
+    phi_list = cp.array([vec.Phi() for vec in event], dtype=cp.float32)
+    mcpt.append(pt_list)
+    mceta.append(eta_list)
+    mcphi.append(phi_list)
 
-# For tracks
-trk_pt = [[vec.Pt() for vec in event] for event in tracks]
-trk_eta = [[vec.Eta() for vec in event] for event in tracks]
-trk_phi = [[vec.Phi() for vec in event] for event in tracks]
+# # For tracks
+# trk_pt = [[vec.Pt() for vec in event] for event in tracks]
+# trk_eta = [[vec.Eta() for vec in event] for event in tracks]
+# trk_phi = [[vec.Phi() for vec in event] for event in tracks]
 
-# Calculate track charges
-trk_charge = [np.sign(curv_event) for curv_event in tsome]
+# # Calculate track charges
+# trk_charge = [np.sign(curv_event) for curv_event in tsome]
 
 # %%
 # Function to determine particle type based on PDG ID
-def determine_particle_type(pdg_id):
-    if pdg_id == 22:
-        return "gamma"
-    elif pdg_id in [111, 130, 310, 2112]:
-        return "neutral_had"
-    elif pdg_id in [11, -11]:
-        return "electron"
-    elif pdg_id in [13, -13]:
-        return "muon"
-    elif pdg_id in [211, -211, 321, -321, 2212, -2212]:
-        return "charged_had"
-    else:
-        return "unknown"
+# def determine_particle_type(pdg_id):
+#     if pdg_id == 22:
+#         return "gamma"
+#     elif pdg_id in [111, 130, 310, 2112]:
+#         return "neutral_had"
+#     elif pdg_id in [11, -11]:
+#         return "electron"
+#     elif pdg_id in [13, -13]:
+#         return "muon"
+#     elif pdg_id in [211, -211, 321, -321, 2212, -2212]:
+#         return "charged_had"
+#     else:
+#         return "unknown"
 
 # %%
-# Step 4: Match truth-level quarks to jets based on proximity in eta-phi space
-
-# Step 5: Match truth-level quarks to jets based on proximity in eta-phi space
+# Step 5: Match truth-level quarks to jets based on proximity in eta-phi space using Numba
 
 # Label mapping and class names
 label_map = {0: 0, 4: 1, 5: 2}
@@ -369,204 +309,169 @@ matched_jet_pt = []
 matched_jet_eta = []
 matched_jet_flavour = []
 
+# Define Numba-accelerated function to calculate delta R
+@njit
+def delta_r(eta1, phi1, eta2, phi2):
+    dphi = phi1 - phi2
+    # Wrap-around for phi
+    if dphi > np.pi:
+        dphi -= 2 * np.pi
+    elif dphi < -np.pi:
+        dphi += 2 * np.pi
+    deta = eta1 - eta2
+    return np.sqrt(deta**2 + dphi**2)
+
 # Iterate over events
 for i in range(len(evevt)):
     if len(jets[i]) == 0:
         continue  # Skip if no jets in the event
+
     # Get indices of quarks in this event
     b_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 5))[0]
     c_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 4))[0]
     u_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) <= 3))[0]
 
+    # Get jet kinematics
+    jet_pt = jpt[i]
+    jet_eta = jeta[i]
+    jet_phi = jphi[i]
+
     # Function to match jets to quarks
-    def match_jets_to_quarks(jet_vecs, quark_vecs, flavour):
-        for quark_vec in quark_vecs:
-            min_dr = float('inf')
-            matched_jet = None
-            for jet_vec in jet_vecs:
-                dr = quark_vec.DeltaR(jet_vec)
+    def match_jets_to_quarks(quark_indices, flavour):
+        for q_idx in quark_indices:
+            quark_eta = truth_particles[i][q_idx].Eta()
+            quark_phi = truth_particles[i][q_idx].Phi()
+            min_dr = np.inf
+            matched_idx = -1
+            for j in range(len(jet_pt)):
+                dr = delta_r(jet_eta[j].get(), jet_phi[j].get(), quark_eta, quark_phi)
                 if dr < min_dr:
                     min_dr = dr
-                    matched_jet = jet_vec
-            if matched_jet:
-                matched_jet_pt.append(matched_jet.Pt())
-                matched_jet_eta.append(matched_jet.Eta())
+                    matched_idx = j
+            if matched_idx >= 0:
+                matched_jet_pt.append(jet_pt[matched_idx].get())
+                matched_jet_eta.append(jet_eta[matched_idx].get())
                 matched_jet_flavour.append(label_map[flavour])
 
     # Match jets to b-quarks
     if len(b_quark_indices) > 0:
-        match_jets_to_quarks(jets[i], [truth_particles[i][idx] for idx in b_quark_indices], 5)
+        match_jets_to_quarks(b_quark_indices, 5)
 
     # Match jets to c-quarks
     if len(c_quark_indices) > 0:
-        match_jets_to_quarks(jets[i], [truth_particles[i][idx] for idx in c_quark_indices], 4)
+        match_jets_to_quarks(c_quark_indices, 4)
 
     # Match jets to light quarks (u, d, s)
     if len(u_quark_indices) > 0:
-        match_jets_to_quarks(jets[i], [truth_particles[i][idx] for idx in u_quark_indices], 0)
+        match_jets_to_quarks(u_quark_indices, 0)
 
-# # Define the label mapping and class names
+
+
+# # Step 5: Match truth-level quarks to jets based on proximity in eta-phi space
+
+# # Label mapping and class names
 # label_map = {0: 0, 4: 1, 5: 2}
 # class_names = ["ujets", "cjets", "bjets"]
 
-# # Create a structured array to hold the jets data
-# b_quark_indices = []
-# c_quark_indices = []
-# u_quark_indices = []
-
-# # Identify b-quarks, c-quarks, and light quarks (u, d, s)
-# for i in range(len(mcpt)):
-#     b_quark_indices.append(np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 5))[0])
-#     c_quark_indices.append(np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 4))[0])
-#     u_quark_indices.append(np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) <= 3))[0])
-
+# # Initialize lists for storing matched jets
 # matched_jet_pt = []
 # matched_jet_eta = []
 # matched_jet_flavour = []
 
-# # Function to match jets to quarks and label them
-# def match_jets_to_quarks(jet_eta, jet_phi, quark_eta, quark_phi, flavour):
-#     if len(jet_eta) == 0 or len(quark_eta) == 0:
-#         return  # Skip if there are no jets or no quarks
-#     distances = np.array([[delta_r(jet_eta[j], jet_phi[j], quark_eta[q], quark_phi[q])
-#                            for q in range(len(quark_eta))]
-#                           for j in range(len(jet_eta))])
-#     closest_jets = np.argmin(distances, axis=0)
-#     for j in closest_jets:
-#         matched_jet_pt.append(jpt[i][j])
-#         matched_jet_eta.append(jeta[i][j])
-#         matched_jet_flavour.append(label_map[flavour])
-        
-        
-# # Match jets to b-quarks
-# for i in range(len(jpt)):
-#     if len(b_quark_indices[i]) > 0:
-#         match_jets_to_quarks(jeta[i], jphi[i], mceta[i][b_quark_indices[i]], mcphi[i][b_quark_indices[i]], 5)
+# # Iterate over events
+# for i in range(len(evevt)):
+#     if len(jets[i]) == 0:
+#         continue  # Skip if no jets in the event
+#     # Get indices of quarks in this event
+#     b_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 5))[0]
+#     c_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) == 4))[0]
+#     u_quark_indices = np.where((mcgst[i] != 0) & (np.abs(mcpdg[i]) <= 3))[0]
 
-# # Match jets to c-quarks
-# for i in range(len(jpt)):
-#     if len(c_quark_indices[i]) > 0:
-#         match_jets_to_quarks(jeta[i], jphi[i], mceta[i][c_quark_indices[i]], mcphi[i][c_quark_indices[i]], 4)
+#     # Function to match jets to quarks
+#     def match_jets_to_quarks(jet_vecs, quark_vecs, flavour):
+#         for quark_vec in quark_vecs:
+#             min_dr = float('inf')
+#             matched_jet = None
+#             for jet_vec in jet_vecs:
+#                 dr = quark_vec.DeltaR(jet_vec)
+#                 if dr < min_dr:
+#                     min_dr = dr
+#                     matched_jet = jet_vec
+#             if matched_jet:
+#                 matched_jet_pt.append(matched_jet.Pt())
+#                 matched_jet_eta.append(matched_jet.Eta())
+#                 matched_jet_flavour.append(label_map[flavour])
 
-# # Match jets to light quarks (u, d, s)
-# for i in range(len(jpt)):
-#     if len(u_quark_indices[i]) > 0:
-#         match_jets_to_quarks(jeta[i], jphi[i], mceta[i][u_quark_indices[i]], mcphi[i][u_quark_indices[i]], 0)
+#     # Match jets to b-quarks
+#     if len(b_quark_indices) > 0:
+#         match_jets_to_quarks(jets[i], [truth_particles[i][idx] for idx in b_quark_indices], 5)
+
+#     # Match jets to c-quarks
+#     if len(c_quark_indices) > 0:
+#         match_jets_to_quarks(jets[i], [truth_particles[i][idx] for idx in c_quark_indices], 4)
+
+#     # Match jets to light quarks (u, d, s)
+#     if len(u_quark_indices) > 0:
+#         match_jets_to_quarks(jets[i], [truth_particles[i][idx] for idx in u_quark_indices], 0)
       
 
 # %%
 # Step 6: Match tracks to jets and calculate quantities for 'consts' dataset
 
-consts_data = []
-
-for i in range(len(evevt)):
-    event_consts = []
-    jet_vecs = jets[i]
-    trk_vecs = tracks[i]
-    for j, jet_vec in enumerate(jet_vecs):
-        jet_consts = []
-        for k, trk_vec in enumerate(trk_vecs):
-            if jet_vec.DeltaR(trk_vec) < 0.4:
-                d0sig = np.sqrt(tscov[i][k][0]) if tscov[i][k][0] > 0 else 1e-6  # Avoid division by zero
-                z0sig = np.sqrt(tscov[i][k][9]) if tscov[i][k][9] > 0 else 1e-6
-
-                # Signed impact parameters
-                theta = jet_vec.Phi() - trk_vec.Phi()
-                sj = 1.0 if np.sin(theta) * tsdze[i][k] >= 0 else -1.0
-                signed_2d_ip = np.abs(tsdze[i][k] / d0sig) * sj
-
-                # 3D signed impact parameter
-                d0z0 = np.sqrt(tsdze[i][k]**2 + tszze[i][k]**2)
-                d0z0_sig = np.sqrt(d0sig**2 + z0sig**2)
-                signed_3d_ip = np.abs(d0z0 / d0z0_sig) * sj
-
-                # Determine particle type
-                particle_type = determine_particle_type(mcpdg[i][k])
-                is_gamma = particle_type == "gamma"
-                is_neutral_had = particle_type == "neutral_had"
-                is_electron = particle_type == "electron"
-                is_muon = particle_type == "muon"
-                is_charged_had = particle_type == "charged_had"
-
-                const = (
-                    -1,  # truth_hadron_idx (if available, replace with correct index)
-                    -1,  # truth_vertex_idx (if available, replace with correct index)
-                    mcpdg[i][k],  # truth_origin_label
-                    True,  # valid
-                    is_gamma,
-                    is_neutral_had,
-                    is_electron,
-                    is_muon,
-                    is_charged_had,
-                    trk_charge[i][k],
-                    trk_vec.Phi() - jet_vec.Phi(),
-                    trk_vec.Eta() - jet_vec.Eta(),
-                    trk_vec.Pt() / jet_vec.Pt() if jet_vec.Pt() > 0 else 0,
-                    tsdze[i][k],
-                    tszze[i][k],
-                    jet_vec.DeltaR(trk_vec),
-                    signed_2d_ip,
-                    signed_3d_ip
-                )
-                jet_consts.append(const)
-        event_consts.extend(jet_consts)
-    consts_data.extend(event_consts)
-
-
-
-
-
-
 # consts_data = []
 
-# # Function to match tracks to jets and calculate quantities
 # for i in range(len(evevt)):
 #     event_consts = []
-#     for j in range(njet[i]):
+#     jet_vecs = jets[i]
+#     trk_vecs = tracks[i]
+#     for j, jet_vec in enumerate(jet_vecs):
 #         jet_consts = []
-#         for k in range(ntrk[i]):
-#             if delta_r(jeta[i][j], jphi[i][j], trk_eta[i][k], trk_phi[i][k]) < 0.4:  # Matching criterion
-#                 d0sig = np.sqrt(tscov[i][k][0])  # Extract d0 uncertainty from the covariance matrix
-#                 z0sig = np.sqrt(tscov[i][k][9])  # Extract z0 uncertainty from the covariance matrix
-#                 signed_2d_ip = signed_ip(tsdze[i][k],
-#                                          d0sig,
-#                                          jphi[i][j], tsphi[i][k])
-#                 signed_3d_ip = signed_ip(np.sqrt(tsdze[i][k]**2 + tszze[i][k]**2),
-#                                          np.sqrt(d0sig**2 + z0sig**2),
-#                                          jphi[i][j], tsphi[i][k])
-                
+#         for k, trk_vec in enumerate(trk_vecs):
+#             if jet_vec.DeltaR(trk_vec) < 0.4:
+#                 d0sig = np.sqrt(tscov[i][k][0]) if tscov[i][k][0] > 0 else 1e-6  # Avoid division by zero
+#                 z0sig = np.sqrt(tscov[i][k][9]) if tscov[i][k][9] > 0 else 1e-6
+
+#                 # Signed impact parameters
+#                 theta = jet_vec.Phi() - trk_vec.Phi()
+#                 sj = 1.0 if np.sin(theta) * tsdze[i][k] >= 0 else -1.0
+#                 signed_2d_ip = np.abs(tsdze[i][k] / d0sig) * sj
+
+#                 # 3D signed impact parameter
+#                 d0z0 = np.sqrt(tsdze[i][k]**2 + tszze[i][k]**2)
+#                 d0z0_sig = np.sqrt(d0sig**2 + z0sig**2)
+#                 signed_3d_ip = np.abs(d0z0 / d0z0_sig) * sj
+
 #                 # Determine particle type
-#                 particle_type = pid(mcpdg[i][k])
+#                 particle_type = determine_particle_type(mcpdg[i][k])
 #                 is_gamma = particle_type == "gamma"
 #                 is_neutral_had = particle_type == "neutral_had"
 #                 is_electron = particle_type == "electron"
 #                 is_muon = particle_type == "muon"
 #                 is_charged_had = particle_type == "charged_had"
-                
+
 #                 const = (
-#                     -1,  # truth_hadron_idx (not available)
-#                     -1,  # truth_vertex_idx (not available)
-#                     mcpdg[i][k],  # truth_origin_label (using PDG ID)
-#                     True,  # valid (assuming all tracks are valid)
+#                     -1,  # truth_hadron_idx (if available, replace with correct index)
+#                     -1,  # truth_vertex_idx (if available, replace with correct index)
+#                     mcpdg[i][k],  # truth_origin_label
+#                     True,  # valid
 #                     is_gamma,
 #                     is_neutral_had,
 #                     is_electron,
 #                     is_muon,
 #                     is_charged_had,
 #                     trk_charge[i][k],
-#                     tsphi[i][k] - jphi[i][j],
-#                     trk_eta[i][k] - jeta[i][j],
-#                     trk_pt[i][k] / jpt[i][j],
+#                     trk_vec.Phi() - jet_vec.Phi(),
+#                     trk_vec.Eta() - jet_vec.Eta(),
+#                     trk_vec.Pt() / jet_vec.Pt() if jet_vec.Pt() > 0 else 0,
 #                     tsdze[i][k],
 #                     tszze[i][k],
-#                     delta_r(jeta[i][j], jphi[i][j], trk_eta[i][k], trk_phi[i][k]),
+#                     jet_vec.DeltaR(trk_vec),
 #                     signed_2d_ip,
 #                     signed_3d_ip
 #                 )
 #                 jet_consts.append(const)
-#         event_consts.append(jet_consts)
-#     consts_data.append(event_consts)
-
+#         event_consts.extend(jet_consts)
+#     consts_data.extend(event_consts)
 
 
 
@@ -579,46 +484,27 @@ jets_data['pt'] = matched_jet_pt
 jets_data['eta'] = matched_jet_eta
 jets_data['flavour'] = matched_jet_flavour
 
-# Convert consts_data to structured array
-flat_consts_data = np.array(consts_data, dtype=dtype_consts)
-
-# Define dataset shapes and chunk sizes
-shape_consts = flat_consts_data.shape
-chunks_consts = (min(1000, shape_consts[0]),)
-
-
-
-
-# # Create a structured array to hold the jets data
-# jets_data = np.empty(len(matched_jet_pt), dtype=dtype_jets)
-# jets_data['pt'] = matched_jet_pt
-# jets_data['eta'] = matched_jet_eta
-# jets_data['flavour'] = matched_jet_flavour
-
-# # Flatten the consts_data for HDF5 storage (since it's a nested list)
-# flat_consts_data = [item for sublist in consts_data for subsublist in sublist for item in subsublist]
+# # Convert consts_data to structured array
+# flat_consts_data = np.array(consts_data, dtype=dtype_consts)
 
 # # Define dataset shapes and chunk sizes
-# shape_consts = (len(flat_consts_data),)
+# shape_consts = flat_consts_data.shape
 # chunks_consts = (min(1000, shape_consts[0]),)
-
-# shape_hadrons = (13500000, 5)
-# chunks_hadrons = (100, 5)
 
 
 # %%
 # Step 8: Create the HDF5 file and datasets
-output_file = "/home/ssaini/dev/muonc/btagging/output_data/output_12Dec2024_v0.h5"
+output_file = "/home/ssaini/dev/muonc/btagging/output_data/output_13Dec2024_v1.h5"
 
 with h5py.File(output_file, "w") as f:
     # Create 'consts' dataset with LZF compression
-    dataset_consts = f.create_dataset(
-        "consts",
-        data=flat_consts_data,
-        dtype=dtype_consts,
-        chunks=chunks_consts,
-        compression="lzf"
-    )
+    # dataset_consts = f.create_dataset(
+    #     "consts",
+    #     data=flat_consts_data,
+    #     dtype=dtype_consts,
+    #     chunks=chunks_consts,
+    #     compression="lzf"
+    # )
 
     # Create 'jets' dataset with LZF compression
     dataset_jets = f.create_dataset(
@@ -630,45 +516,6 @@ with h5py.File(output_file, "w") as f:
     dataset_jets.attrs["flavour_label"] = np.array(class_names, dtype="S")
 
 print(f"Conversion complete. Data saved as a .h5 file at {output_file}")
-
-
-
-
-# # Step 7: Create the HDF5 file and datasets
-# with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_11Dec2024_v2.h5", "w") as f:
-#     # Create 'consts' dataset with LZF compression
-#     dataset_consts = f.create_dataset(
-#         "consts",
-#         shape=shape_consts,
-#         dtype=dtype_consts,
-#         chunks=chunks_consts,
-#         compression="lzf"
-#     )
-#     dataset_consts[...] = np.array(flat_consts_data, dtype=dtype_consts)  # Store the calculated data
-
-#     # Create 'hadrons' dataset with LZF compression
-#     dataset_hadrons = f.create_dataset(
-#         "hadrons",
-#         shape=shape_hadrons,
-#         dtype=dtype_hadrons,
-#         chunks=chunks_hadrons,
-#         compression="lzf"
-#     )
-#     dataset_hadrons[...] = np.zeros(shape_hadrons, dtype=dtype_hadrons)  # Optionally initialize
-
-#     # Create 'jets' dataset with LZF compression
-#     dataset_jets = f.create_dataset(
-#         "jets",
-#         data=jets_data,
-#         dtype=dtype_jets,
-#         compression="lzf"
-#     )
-#     dataset_jets[...] = jets_data  # Store the calculated data
-    
-#     # Set the 'flavour_label' attribute for the 'jets' dataset
-#     dataset_jets.attrs["flavour_label"] = np.array(class_names, dtype="S")
-
-# print("Conversion complete. Data saved as a .h5 file in /home/ssaini/dev/muonc/btagging/output_data")
 
 
 # %%
