@@ -4,11 +4,6 @@ import uproot
 import h5py
 import numpy as np
 import awkward as ak
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # %%
 # Step 1: Open the ROOT file and extract data
@@ -273,68 +268,68 @@ for i in range(len(jpt)):
 # Step 5: Calculate 'truth_vertex_idx' based on stable particles
 
 # Initialize a list to hold 'truth_vertex_idx' for each event
-truth_vertex_idx_list = []
+# truth_vertex_idx_list = []
 
-decimals = 3  # Precision for rounding to handle float comparisons
+# decimals = 3  # Precision for rounding to handle float comparisons
 
-# Loop over each event to process vertices
-for i in range(len(evevt)):
-    # Extract per-event particle data and convert to NumPy arrays
-    mcgst_event = ak.to_numpy(mcgst[i])
-    mcvtx_event = ak.to_numpy(mcvtx[i])
-    mcvty_event = ak.to_numpy(mcvty[i])
-    mcvtz_event = ak.to_numpy(mcvtz[i])
+# # Loop over each event to process vertices
+# for i in range(len(evevt)):
+#     # Extract per-event particle data and convert to NumPy arrays
+#     mcgst_event = ak.to_numpy(mcgst[i])
+#     mcvtx_event = ak.to_numpy(mcvtx[i])
+#     mcvty_event = ak.to_numpy(mcvty[i])
+#     mcvtz_event = ak.to_numpy(mcvtz[i])
     
-    # Step 1: Filter stable particles (mcgst == 1)
-    stable_mask = mcgst_event == 1
+#     # Step 1: Filter stable particles (mcgst == 1)
+#     stable_mask = mcgst_event == 1
     
-    # Extract vertex coordinates for stable particles
-    stable_mcvtx = mcvtx_event[stable_mask]
-    stable_mcvty = mcvty_event[stable_mask]
-    stable_mcvtz = mcvtz_event[stable_mask]
+#     # Extract vertex coordinates for stable particles
+#     stable_mcvtx = mcvtx_event[stable_mask]
+#     stable_mcvty = mcvty_event[stable_mask]
+#     stable_mcvtz = mcvtz_event[stable_mask]
     
-    # Step 2: Round vertex coordinates to handle float comparison
-    rounded_mcvtx = np.round(stable_mcvtx, decimals=decimals)
-    rounded_mcvty = np.round(stable_mcvty, decimals=decimals)
-    rounded_mcvtz = np.round(stable_mcvtz, decimals=decimals)
+#     # Step 2: Round vertex coordinates to handle float comparison
+#     rounded_mcvtx = np.round(stable_mcvtx, decimals=decimals)
+#     rounded_mcvty = np.round(stable_mcvty, decimals=decimals)
+#     rounded_mcvtz = np.round(stable_mcvtz, decimals=decimals)
     
-    # Step 3: Stack the rounded coordinates into a 2D array (N_stable_particles, 3)
-    if len(rounded_mcvtx) > 0:
-        try:
-            vertex_coords = np.stack([rounded_mcvtx, rounded_mcvty, rounded_mcvtz], axis=1)
-        except ValueError as e:
-            logger.error(f"Event {i}: Error stacking coordinates - {e}")
-            vertex_coords = np.empty((0, 3))
+#     # Step 3: Stack the rounded coordinates into a 2D array (N_stable_particles, 3)
+#     if len(rounded_mcvtx) > 0:
+#         try:
+#             vertex_coords = np.stack([rounded_mcvtx, rounded_mcvty, rounded_mcvtz], axis=1)
+#         except ValueError as e:
+#             logger.error(f"Event {i}: Error stacking coordinates - {e}")
+#             vertex_coords = np.empty((0, 3))
         
-        # Find unique vertices and assign an index to each group
-        unique_vertices, unique_indices = np.unique(vertex_coords, axis=0, return_inverse=True)
-    else:
-        # If no stable particles, create an empty array
-        unique_indices = np.array([], dtype=int)
+#         # Find unique vertices and assign an index to each group
+#         unique_vertices, unique_indices = np.unique(vertex_coords, axis=0, return_inverse=True)
+#     else:
+#         # If no stable particles, create an empty array
+#         unique_indices = np.array([], dtype=int)
     
-    # Initialize 'truth_vertex_idx' for all particles in the event with -1
-    truth_vertex_idx_event = -1 * np.ones(len(mcgst_event), dtype=int)
+#     # Initialize 'truth_vertex_idx' for all particles in the event with -1
+#     truth_vertex_idx_event = -1 * np.ones(len(mcgst_event), dtype=int)
     
-    # Assign the unique vertex indices to stable particles
-    stable_indices = np.where(stable_mask)[0]
+#     # Assign the unique vertex indices to stable particles
+#     stable_indices = np.where(stable_mask)[0]
     
-    # Ensure that the lengths match before assignment
-    if len(unique_indices) == len(stable_indices):
-        truth_vertex_idx_event[stable_indices] = unique_indices
-    elif len(unique_indices) < len(stable_indices):
-        # In case unique_indices has fewer elements due to some unexpected reason
-        truth_vertex_idx_event[stable_indices[:len(unique_indices)]] = unique_indices
-        logger.warning(f"Event {i}: Mismatch in unique_indices and stable_indices lengths.")
-    else:
-        # If unique_indices somehow has more elements, which shouldn't happen
-        truth_vertex_idx_event[stable_indices] = unique_indices[:len(stable_indices)]
-        logger.warning(f"Event {i}: Excess unique_indices, some indices may be ignored.")
+#     # Ensure that the lengths match before assignment
+#     if len(unique_indices) == len(stable_indices):
+#         truth_vertex_idx_event[stable_indices] = unique_indices
+#     elif len(unique_indices) < len(stable_indices):
+#         # In case unique_indices has fewer elements due to some unexpected reason
+#         truth_vertex_idx_event[stable_indices[:len(unique_indices)]] = unique_indices
+#         logger.warning(f"Event {i}: Mismatch in unique_indices and stable_indices lengths.")
+#     else:
+#         # If unique_indices somehow has more elements, which shouldn't happen
+#         truth_vertex_idx_event[stable_indices] = unique_indices[:len(stable_indices)]
+#         logger.warning(f"Event {i}: Excess unique_indices, some indices may be ignored.")
     
-    # Append the per-event 'truth_vertex_idx' to the list
-    truth_vertex_idx_list.append(truth_vertex_idx_event)
+#     # Append the per-event 'truth_vertex_idx' to the list
+#     truth_vertex_idx_list.append(truth_vertex_idx_event)
 
-# Convert the list of arrays into an Awkward Array
-truth_vertex_idx = ak.Array(truth_vertex_idx_list)
+# # Convert the list of arrays into an Awkward Array
+# truth_vertex_idx = ak.Array(truth_vertex_idx_list)
 
 
 # %%
@@ -368,7 +363,7 @@ for i in range(len(evevt)):
                 
                 const = (
                     -1,  # truth_hadron_idx (not available)
-                    truth_vertex_idx,  # truth_vertex_idx (not available)
+                    -1,  # truth_vertex_idx (not available)
                     mcpdg[i][k],  # truth_origin_label (using PDG ID)
                     True,  # valid (assuming all tracks are valid)
                     is_gamma,
@@ -396,8 +391,6 @@ for i in range(len(evevt)):
 # %%
 # Step 7: Create a structured array to hold data and define its shapes and chunk sizes
 
-import itertools
-
 # Create a structured array to hold the jets data
 jets_data = np.empty(len(matched_jet_pt), dtype=dtype_jets)
 jets_data['pt'] = matched_jet_pt
@@ -406,11 +399,11 @@ jets_data['flavour'] = matched_jet_flavour
 
 # Flatten the consts_data for HDF5 storage (since it's a nested list)
 # Estimate total size by iterating once (optional, if possible)
-total_consts = sum(len(subsublist) for sublist in consts_data for subsublist in sublist)
+flat_consts_data = [item for sublist in consts_data for subsublist in sublist for item in subsublist]
 
 # Define dataset shapes and chunk sizes
-shape_consts = (total_consts,)
-chunks_consts = (min(100, shape_consts[0]),)
+shape_consts = (len(flat_consts_data),)
+chunks_consts = (min(1000, shape_consts[0]),)
 
 shape_hadrons = (13500000, 5)
 chunks_hadrons = (100, 5)
@@ -418,7 +411,7 @@ chunks_hadrons = (100, 5)
 
 # %%
 # Step 8: Create the HDF5 file and datasets
-with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_03Jan2025_v2.h5", "w") as f:
+with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_06Jan2025_v1.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
@@ -427,6 +420,8 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_03Jan2025_v2.
         chunks=chunks_consts,
         compression="lzf"
     )
+    dataset_consts[...] = np.array(flat_consts_data, dtype=dtype_consts)  # Store the calculated data
+    
 
     # Create 'hadrons' dataset with LZF compression
     dataset_hadrons = f.create_dataset(
@@ -449,28 +444,6 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_03Jan2025_v2.
     
     # Set the 'flavour_label' attribute for the 'jets' dataset
     dataset_jets.attrs["flavour_label"] = np.array(class_names, dtype="S")
-
-    # Flatten and write 'consts' data in batches to minimize memory usage
-    batch_size = 10
-    flat_consts_generator = (
-        tuple(ak.to_list(item))
-        for sublist in consts_data
-        for subsublist in sublist
-        for item in subsublist
-    )
-    
-    batch = []
-    index = 0
-    for const in flat_consts_generator:
-        batch.append(const)
-        if len(batch) == batch_size:
-            dataset_consts[index:index+batch_size] = np.array(batch, dtype=dtype_consts)
-            index += batch_size
-            batch = []
-    
-    # Write any remaining data
-    if batch:
-        dataset_consts[index:index+len(batch)] = np.array(batch, dtype=dtype_consts)
 
 
 print("Conversion complete. Data saved as a .h5 file in /home/ssaini/dev/muonc/btagging/output_data")
