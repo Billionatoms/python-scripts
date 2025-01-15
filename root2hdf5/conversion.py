@@ -79,15 +79,15 @@ with uproot.open(file_path) as f:
 
 # Dataset 'consts'
 dtype_consts = np.dtype([
-    # ("truth_hadron_idx", np.int32),                 # particle hadron ID?
-    # ("truth_vertex_idx", np.int32),                 # particle vertex ID?
-    # ("truth_origin_label", np.int32),               # particle origin label?
-    # ("valid", np.bool_),                            # Valid???
-    # ("is_gamma", np.bool_),                         # is it a photon?
-    # ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
-    # ("is_electron", np.bool_),                      # is it a electron?
-    # ("is_muon", np.bool_),                          # is it a muon?
-    # ("is_charged_had", np.bool_),                   # is it a charged hadron?
+    ("truth_hadron_idx", np.int32),                 # particle hadron ID?
+    ("truth_vertex_idx", np.int32),                 # particle vertex ID?
+    ("truth_origin_label", np.int32),               # particle origin label?
+    ("valid", np.bool_),                            # Valid???
+    ("is_gamma", np.bool_),                         # is it a photon?
+    ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
+    ("is_electron", np.bool_),                      # is it a electron?
+    ("is_muon", np.bool_),                          # is it a muon?
+    ("is_charged_had", np.bool_),                   # is it a charged hadron?
     ("charge", np.int32),                           # Charge of the particle
     ("phi_rel", np.float32),                        # phi of the particle?
     ("eta_rel", np.float32),                        # eta of the particle
@@ -449,40 +449,52 @@ for i in range(len(jpt)):
 # %%
 # Step 6: Calculate 'truth_vertex_idx' based on stable particles
 
-# # Initialize a list to hold 'truth_vertex_idx' for each event
-# truth_vertex = []
+# Initialize a list to hold 'truth_vertex_idx' for each event
+truth_vertex = []
 
-# decimals = 6  # Precision for rounding
+decimals = 10  # Precision for rounding
 
-# for i in range(len(evevt)):
-#     # 1) Filter for stable particles
-#     mcgst_event = ak.to_numpy(mcgst[i])
-#     mcvtx_event = ak.to_numpy(mcvtx[i])
-#     mcvty_event = ak.to_numpy(mcvty[i])
-#     mcvtz_event = ak.to_numpy(mcvtz[i])
+for i in range(len(evevt)):
+    # 1) Filter for stable particles
+    mcgst_event = ak.to_numpy(mcgst[i])
+    mcvtx_event = ak.to_numpy(mcvtx[i])
+    mcvty_event = ak.to_numpy(mcvty[i])
+    mcvtz_event = ak.to_numpy(mcvtz[i])
+    
+    
 
-#     stable_mask = (mcgst_event == 1)
+    stable_mask = (mcgst_event == 0)
+    
+    # print(mcgst, "status")
+    # print(mcvtx, "x")
+    # print(mcvty, "y")
+    # print(mcvtz, "z")
+    
 
-#     # 2) Round vertex coordinates for stable particles
-#     stable_mcvtx = np.round(mcvtx_event[stable_mask], decimals=decimals)
-#     stable_mcvty = np.round(mcvty_event[stable_mask], decimals=decimals)
-#     stable_mcvtz = np.round(mcvtz_event[stable_mask], decimals=decimals)
+    # 2) Round vertex coordinates for stable particles
+    stable_mcvtx = np.round(mcvtx_event[stable_mask], decimals=decimals)
+    stable_mcvty = np.round(mcvty_event[stable_mask], decimals=decimals)
+    stable_mcvtz = np.round(mcvtz_event[stable_mask], decimals=decimals)
+    
+#    print(stable_mcvtx[5])
 
-#     # Stack into shape (N_stable, 3)
-#     stable_coords = np.column_stack((stable_mcvtx, stable_mcvty, stable_mcvtz))
+    # Stack into shape (N_stable, 3)
+    stable_coords = np.column_stack((stable_mcvtx, stable_mcvty, stable_mcvtz))
+    
+#    print(stable_coords[5])
 
-#     # Group identical vertices and assign a unique index
-#     # unique_coords is shape (K, 3), inverse_indices is shape (N_stable,)
-#     unique_coords, inverse_indices = np.unique(stable_coords, axis=0, return_inverse=True)
+    # Group identical vertices and assign a unique index
+    # unique_coords is shape (K, 3), inverse_indices is shape (N_stable,)
+    unique_coords, inverse_indices = np.unique(stable_coords, axis=0, return_inverse=True)
 
-#     # Prepare output array for the entire event (all particles, stable or not)
-#     truth_vertex_event = np.full(len(mcgst_event), -1, dtype=np.int32)
+    # Prepare output array for the entire event (all particles, stable or not)
+    truth_vertex_event = np.full(len(mcgst_event), -1, dtype=np.int32)
 
-#     # 3) Assign index to each stable particle
-#     # Each stable_mask entry gets the corresponding unique vertex index
-#     truth_vertex_event[stable_mask] = inverse_indices
+    # 3) Assign index to each stable particle
+    # Each stable_mask entry gets the corresponding unique vertex index
+    truth_vertex_event[stable_mask] = inverse_indices
 
-#     truth_vertex.append(truth_vertex_event)
+    truth_vertex.append(truth_vertex_event)
 
 
 # %%
@@ -507,30 +519,30 @@ for i in range(len(evevt)):
                                          jphi[i][j], tsphi[i][k])
                 
                 # # Determine particle type
-                # particle_type = pid(mcpdg[i][k])
-                # is_gamma = particle_type == "gamma"
-                # is_neutral_had = particle_type == "neutral_had"
-                # is_electron = particle_type == "electron"
-                # is_muon = particle_type == "muon"
-                # is_charged_had = particle_type == "charged_had"
+                particle_type = pid(mcpdg[i][k])
+                is_gamma = particle_type == "gamma"
+                is_neutral_had = particle_type == "neutral_had"
+                is_electron = particle_type == "electron"
+                is_muon = particle_type == "muon"
+                is_charged_had = particle_type == "charged_had"
                 
                 # # Safely assign truth_vertex_idx
-                # if i < len(truth_vertex) and k < len(truth_vertex[i]):
-                #     truth_vertex_idx = truth_vertex[i][k]
-                # else:
-                #     truth_vertex_idx = -1  # Default value if index is out of range
+                if i < len(truth_vertex) and k < len(truth_vertex[i]):
+                    truth_vertex_idx = truth_vertex[i][k]
+                else:
+                    truth_vertex_idx = -1  # Default value if index is out of range
                 
                 
                 const = (
-                    # -1,  # truth_hadron_idx (not available)
-                    # truth_vertex_idx,  # truth_vertex_idx
-                    # mcpdg[i][k],  # truth_origin_label (using PDG ID)
-                    # True,  # valid (assuming all tracks are valid)
-                    # is_gamma,
-                    # is_neutral_had,
-                    # is_electron,
-                    # is_muon,
-                    # is_charged_had,
+                    -1,  # truth_hadron_idx (not available)
+                    truth_vertex_idx,  # truth_vertex_idx
+                    mcpdg[i][k],  # truth_origin_label (using PDG ID)
+                    True,  # valid (assuming all tracks are valid)
+                    is_gamma,
+                    is_neutral_had,
+                    is_electron,
+                    is_muon,
+                    is_charged_had,
                     trk_charge[i][k],
                     tsphi[i][k] - jphi[i][j],
                     trk_eta[i][k] - jeta[i][j],
@@ -582,7 +594,7 @@ shape_consts = (len(flat_consts_data),)
 
 # %%
 # Step 9: Create the HDF5 file and datasets
-with h5py.File("/home/ssaini/mucoll/btagging/output_data/output_15Jan2025_v1.h5", "w") as f:
+with h5py.File("/home/ssaini/mucoll/btagging/output_data/output_15Jan2025_v2.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
@@ -618,7 +630,7 @@ with h5py.File("/home/ssaini/mucoll/btagging/output_data/output_15Jan2025_v1.h5"
     dataset_jets.attrs["flavour_label"] = np.array(class_names, dtype="S")
 
 
-print("Conversion complete. Data saved as a .h5 file in /home/ssaini/dev/muonc/btagging/output_data")
+print("Conversion complete. Data saved as a .h5 file in /home/ssaini/mucoll/btagging/output_data")
 
 
 # %%
