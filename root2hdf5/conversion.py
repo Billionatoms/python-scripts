@@ -79,15 +79,15 @@ with uproot.open(file_path) as f:
 
 # Dataset 'consts'
 dtype_consts = np.dtype([
-    ("truth_hadron_idx", np.int32),                 # particle hadron ID?
-    ("truth_vertex_idx", np.int32),                 # particle vertex ID?
-    ("truth_origin_label", np.int32),               # particle origin label?
-    ("valid", np.bool_),                            # Valid???
-    ("is_gamma", np.bool_),                         # is it a photon?
-    ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
-    ("is_electron", np.bool_),                      # is it a electron?
-    ("is_muon", np.bool_),                          # is it a muon?
-    ("is_charged_had", np.bool_),                   # is it a charged hadron?
+    # ("truth_hadron_idx", np.int32),                 # particle hadron ID?
+    # ("truth_vertex_idx", np.int32),                 # particle vertex ID?
+    # ("truth_origin_label", np.int32),               # particle origin label?
+    # ("valid", np.bool_),                            # Valid???
+    # ("is_gamma", np.bool_),                         # is it a photon?
+    # ("is_neutral_had", np.bool_),                   # is it a neutral hadron?
+    # ("is_electron", np.bool_),                      # is it a electron?
+    # ("is_muon", np.bool_),                          # is it a muon?
+    # ("is_charged_had", np.bool_),                   # is it a charged hadron?
     ("charge", np.int32),                           # Charge of the particle
     ("phi_rel", np.float32),                        # phi of the particle?
     ("eta_rel", np.float32),                        # eta of the particle
@@ -100,17 +100,17 @@ dtype_consts = np.dtype([
 ])
 
 
-# Dataset 'hadrons'
-dtype_hadrons = np.dtype([                          # Truth particles
-    ("valid", 'bool'),                            # Validity flag, for more robust selection, true for any truth particle that is defined
-    ("pt", 'f4'),                             # pT of the truth particles
-    ("Lxy", 'f4'),                            # truth particle decay displacement
-    ("flavour", 'i4'),                          # 5 if the truth particle is a B hadron, 4 if the truth particle is a C hadron, -1 otherwise.
-    ("hadron_idx", 'i4'),                       # generator level barcode of the truth particle, used to link to objects in other datasets
-    ("hadron_parent_idx", 'i4'),                # barcode of the parent B hadron (if one exists) of the truth particle
-    ("mass", 'f4'),                           # Mass of the truth particle
-#    ("dr", 'f4')                              # truth particle dR(particle, jet)
-])
+# # Dataset 'hadrons'
+# dtype_hadrons = np.dtype([                          # Truth particles
+#     ("valid", 'bool'),                            # Validity flag, for more robust selection, true for any truth particle that is defined
+#     ("pt", 'f4'),                             # pT of the truth particles
+#     ("Lxy", 'f4'),                            # truth particle decay displacement
+#     ("flavour", 'i4'),                          # 5 if the truth particle is a B hadron, 4 if the truth particle is a C hadron, -1 otherwise.
+#     ("hadron_idx", 'i4'),                       # generator level barcode of the truth particle, used to link to objects in other datasets
+#     ("hadron_parent_idx", 'i4'),                # barcode of the parent B hadron (if one exists) of the truth particle
+#     ("mass", 'f4'),                           # Mass of the truth particle
+# #    ("dr", 'f4')                              # truth particle dR(particle, jet)
+# ])
 
 
 # Dataset 'jets'
@@ -344,54 +344,54 @@ trk_phi = tsphi
 #     hadrons_list.append(hadrons_data)
 
 
-hadrons_list = []
+# hadrons_list = []
 
-for i in range(len(evevt)):
-    num_hadrons = len(mcpt[i])
-    hadrons_data = np.empty(num_hadrons, dtype=dtype_hadrons)
+# for i in range(len(evevt)):
+#     num_hadrons = len(mcpt[i])
+#     hadrons_data = np.empty(num_hadrons, dtype=dtype_hadrons)
     
-    # Validity Mask
-    valid_mask = mcgst[i] != 0
-    hadrons_data["valid"] = valid_mask
+#     # Validity Mask
+#     valid_mask = mcgst[i] != 0
+#     hadrons_data["valid"] = valid_mask
     
-    # Assign values for valid hadrons
-    hadrons_data["pt"][valid_mask] = mcpt[i][valid_mask]
-    hadrons_data["Lxy"][valid_mask] = Lxy(mcepx[i][valid_mask], mcepy[i][valid_mask],
-                                         mcvtx[i][valid_mask], mcvty[i][valid_mask])
+#     # Assign values for valid hadrons
+#     hadrons_data["pt"][valid_mask] = mcpt[i][valid_mask]
+#     hadrons_data["Lxy"][valid_mask] = Lxy(mcepx[i][valid_mask], mcepy[i][valid_mask],
+#                                          mcvtx[i][valid_mask], mcvty[i][valid_mask])
     
-    # Flavour Assignment
-    hadrons_data["flavour"][valid_mask & (np.abs(mcpdg[i]) == 5)] = 5  # b-quark
-    hadrons_data["flavour"][valid_mask & (np.abs(mcpdg[i]) == 4)] = 4  # c-quark
-    hadrons_data["flavour"][valid_mask & (np.abs(mcpdg[i]) <= 3)] = -1  # Undefined
+#     # Flavour Assignment
+#     hadrons_data["flavour"][valid_mask & (np.abs(mcpdg[i]) == 5)] = 5  # b-quark
+#     hadrons_data["flavour"][valid_mask & (np.abs(mcpdg[i]) == 4)] = 4  # c-quark
+#     hadrons_data["flavour"][valid_mask & (np.abs(mcpdg[i]) <= 3)] = -1  # Undefined
     
-    # Assign indices and mass
-    hadrons_data["hadron_idx"][valid_mask] = mcsst[i][valid_mask]
-    hadrons_data["hadron_parent_idx"][valid_mask] = -1  # Default value
-    hadrons_data["mass"][valid_mask] = mcmas[i][valid_mask]
+#     # Assign indices and mass
+#     hadrons_data["hadron_idx"][valid_mask] = mcsst[i][valid_mask]
+#     hadrons_data["hadron_parent_idx"][valid_mask] = -1  # Default value
+#     hadrons_data["mass"][valid_mask] = mcmas[i][valid_mask]
     
-    # Compute ΔR for valid hadrons
-    # if len(jeta[i]) > 0 and len(mceta[i]) > 0:
-    #     hadrons_eta = mceta[i][valid_mask]
-    #     hadrons_phi = mcphi[i][valid_mask]
-    #     dr = delta_r_vectorized(hadrons_eta, hadrons_phi, jeta[i], jphi[i])
-    #     min_dr = np.min(dr, axis=1)
-    #     # Handle non-finite ΔR values
-    #     min_dr[~np.isfinite(min_dr)] = -1.0
-    #     hadrons_data["dr"][valid_mask] = min_dr
-    # else:
-    #     hadrons_data["dr"][valid_mask] = -1.0
+#     # Compute ΔR for valid hadrons
+#     # if len(jeta[i]) > 0 and len(mceta[i]) > 0:
+#     #     hadrons_eta = mceta[i][valid_mask]
+#     #     hadrons_phi = mcphi[i][valid_mask]
+#     #     dr = delta_r_vectorized(hadrons_eta, hadrons_phi, jeta[i], jphi[i])
+#     #     min_dr = np.min(dr, axis=1)
+#     #     # Handle non-finite ΔR values
+#     #     min_dr[~np.isfinite(min_dr)] = -1.0
+#     #     hadrons_data["dr"][valid_mask] = min_dr
+#     # else:
+#     #     hadrons_data["dr"][valid_mask] = -1.0
     
-    # Assign placeholders for invalid hadrons
-    hadrons_data["pt"][~valid_mask] = np.nan
-    hadrons_data["Lxy"][~valid_mask] = np.nan
-    hadrons_data["flavour"][~valid_mask] = -1
-    hadrons_data["hadron_idx"][~valid_mask] = -1
-    hadrons_data["hadron_parent_idx"][~valid_mask] = -1
-    hadrons_data["mass"][~valid_mask] = np.nan
-    # hadrons_data["dr"][~valid_mask] = np.nan
+#     # Assign placeholders for invalid hadrons
+#     hadrons_data["pt"][~valid_mask] = np.nan
+#     hadrons_data["Lxy"][~valid_mask] = np.nan
+#     hadrons_data["flavour"][~valid_mask] = -1
+#     hadrons_data["hadron_idx"][~valid_mask] = -1
+#     hadrons_data["hadron_parent_idx"][~valid_mask] = -1
+#     hadrons_data["mass"][~valid_mask] = np.nan
+#     # hadrons_data["dr"][~valid_mask] = np.nan
     
-    # Append to the list
-    hadrons_list.append(hadrons_data)
+#     # Append to the list
+#     hadrons_list.append(hadrons_data)
 
 
 
@@ -449,40 +449,40 @@ for i in range(len(jpt)):
 # %%
 # Step 6: Calculate 'truth_vertex_idx' based on stable particles
 
-# Initialize a list to hold 'truth_vertex_idx' for each event
-truth_vertex = []
+# # Initialize a list to hold 'truth_vertex_idx' for each event
+# truth_vertex = []
 
-decimals = 6  # Precision for rounding
+# decimals = 6  # Precision for rounding
 
-for i in range(len(evevt)):
-    # 1) Filter for stable particles
-    mcgst_event = ak.to_numpy(mcgst[i])
-    mcvtx_event = ak.to_numpy(mcvtx[i])
-    mcvty_event = ak.to_numpy(mcvty[i])
-    mcvtz_event = ak.to_numpy(mcvtz[i])
+# for i in range(len(evevt)):
+#     # 1) Filter for stable particles
+#     mcgst_event = ak.to_numpy(mcgst[i])
+#     mcvtx_event = ak.to_numpy(mcvtx[i])
+#     mcvty_event = ak.to_numpy(mcvty[i])
+#     mcvtz_event = ak.to_numpy(mcvtz[i])
 
-    stable_mask = (mcgst_event == 1)
+#     stable_mask = (mcgst_event == 1)
 
-    # 2) Round vertex coordinates for stable particles
-    stable_mcvtx = np.round(mcvtx_event[stable_mask], decimals=decimals)
-    stable_mcvty = np.round(mcvty_event[stable_mask], decimals=decimals)
-    stable_mcvtz = np.round(mcvtz_event[stable_mask], decimals=decimals)
+#     # 2) Round vertex coordinates for stable particles
+#     stable_mcvtx = np.round(mcvtx_event[stable_mask], decimals=decimals)
+#     stable_mcvty = np.round(mcvty_event[stable_mask], decimals=decimals)
+#     stable_mcvtz = np.round(mcvtz_event[stable_mask], decimals=decimals)
 
-    # Stack into shape (N_stable, 3)
-    stable_coords = np.column_stack((stable_mcvtx, stable_mcvty, stable_mcvtz))
+#     # Stack into shape (N_stable, 3)
+#     stable_coords = np.column_stack((stable_mcvtx, stable_mcvty, stable_mcvtz))
 
-    # Group identical vertices and assign a unique index
-    # unique_coords is shape (K, 3), inverse_indices is shape (N_stable,)
-    unique_coords, inverse_indices = np.unique(stable_coords, axis=0, return_inverse=True)
+#     # Group identical vertices and assign a unique index
+#     # unique_coords is shape (K, 3), inverse_indices is shape (N_stable,)
+#     unique_coords, inverse_indices = np.unique(stable_coords, axis=0, return_inverse=True)
 
-    # Prepare output array for the entire event (all particles, stable or not)
-    truth_vertex_event = np.full(len(mcgst_event), -1, dtype=np.int32)
+#     # Prepare output array for the entire event (all particles, stable or not)
+#     truth_vertex_event = np.full(len(mcgst_event), -1, dtype=np.int32)
 
-    # 3) Assign index to each stable particle
-    # Each stable_mask entry gets the corresponding unique vertex index
-    truth_vertex_event[stable_mask] = inverse_indices
+#     # 3) Assign index to each stable particle
+#     # Each stable_mask entry gets the corresponding unique vertex index
+#     truth_vertex_event[stable_mask] = inverse_indices
 
-    truth_vertex.append(truth_vertex_event)
+#     truth_vertex.append(truth_vertex_event)
 
 
 # %%
@@ -506,31 +506,31 @@ for i in range(len(evevt)):
                                          np.sqrt(d0sig**2 + z0sig**2),
                                          jphi[i][j], tsphi[i][k])
                 
-                # Determine particle type
-                particle_type = pid(mcpdg[i][k])
-                is_gamma = particle_type == "gamma"
-                is_neutral_had = particle_type == "neutral_had"
-                is_electron = particle_type == "electron"
-                is_muon = particle_type == "muon"
-                is_charged_had = particle_type == "charged_had"
+                # # Determine particle type
+                # particle_type = pid(mcpdg[i][k])
+                # is_gamma = particle_type == "gamma"
+                # is_neutral_had = particle_type == "neutral_had"
+                # is_electron = particle_type == "electron"
+                # is_muon = particle_type == "muon"
+                # is_charged_had = particle_type == "charged_had"
                 
-                # Safely assign truth_vertex_idx
-                if i < len(truth_vertex) and k < len(truth_vertex[i]):
-                    truth_vertex_idx = truth_vertex[i][k]
-                else:
-                    truth_vertex_idx = -1  # Default value if index is out of range
+                # # Safely assign truth_vertex_idx
+                # if i < len(truth_vertex) and k < len(truth_vertex[i]):
+                #     truth_vertex_idx = truth_vertex[i][k]
+                # else:
+                #     truth_vertex_idx = -1  # Default value if index is out of range
                 
                 
                 const = (
-                    -1,  # truth_hadron_idx (not available)
-                    truth_vertex_idx,  # truth_vertex_idx
-                    mcpdg[i][k],  # truth_origin_label (using PDG ID)
-                    True,  # valid (assuming all tracks are valid)
-                    is_gamma,
-                    is_neutral_had,
-                    is_electron,
-                    is_muon,
-                    is_charged_had,
+                    # -1,  # truth_hadron_idx (not available)
+                    # truth_vertex_idx,  # truth_vertex_idx
+                    # mcpdg[i][k],  # truth_origin_label (using PDG ID)
+                    # True,  # valid (assuming all tracks are valid)
+                    # is_gamma,
+                    # is_neutral_had,
+                    # is_electron,
+                    # is_muon,
+                    # is_charged_had,
                     trk_charge[i][k],
                     tsphi[i][k] - jphi[i][j],
                     trk_eta[i][k] - jeta[i][j],
@@ -558,16 +558,16 @@ jets_data['eta'] = matched_jet_eta
 jets_data['flavour'] = matched_jet_flavour
 
 # Create a structure array to hold the 'hadrons' data
-hadron_data = np.concatenate(hadrons_list)
+# hadron_data = np.concatenate(hadrons_list)
 
-# Verify hadron_data integrity
-print(f"Shape of hadron_data: {hadron_data.shape}")
-print(f"Dtype of hadron_data: {hadron_data.dtype}")
-print("First 5 hadrons:")
-print(hadron_data[:100])
+# # Verify hadron_data integrity
+# print(f"Shape of hadron_data: {hadron_data.shape}")
+# print(f"Dtype of hadron_data: {hadron_data.dtype}")
+# print("First 5 hadrons:")
+# print(hadron_data[:100])
 
-if hadron_data.size == 0:
-    raise ValueError("hadrons_data is empty. Cannot create an empty 'hadrons' dataset.")
+# if hadron_data.size == 0:
+#     raise ValueError("hadrons_data is empty. Cannot create an empty 'hadrons' dataset.")
 
 
 # Flatten the consts_data for HDF5 storage (since it's a nested list)
@@ -582,7 +582,7 @@ shape_consts = (len(flat_consts_data),)
 
 # %%
 # Step 9: Create the HDF5 file and datasets
-with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_10Jan2025_v6.h5", "w") as f:
+with h5py.File("/home/ssaini/mucoll/btagging/output_data/output_15Jan2025_v1.h5", "w") as f:
     # Create 'consts' dataset with LZF compression
     dataset_consts = f.create_dataset(
         "consts",
@@ -595,13 +595,13 @@ with h5py.File("/home/ssaini/dev/muonc/btagging/output_data/output_10Jan2025_v6.
 
     # Create 'hadrons' dataset with LZF compression
     # Directly pass the data instead of specifying shape and then assigning
-    dataset_hadrons = f.create_dataset(
-        "hadrons",
-        data=hadron_data,
-        dtype=dtype_hadrons,
-        compression="lzf",
-        chunks=True  # Enable chunking; h5py will choose an appropriate chunk size
-    )
+    # dataset_hadrons = f.create_dataset(
+    #     "hadrons",
+    #     data=hadron_data,
+    #     dtype=dtype_hadrons,
+    #     compression="lzf",
+    #     chunks=True  # Enable chunking; h5py will choose an appropriate chunk size
+    # )
 #    dataset_hadrons[...] = hadron_data  # Optionally initialize
 
     # Create 'jets' dataset with LZF compression
